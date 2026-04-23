@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: touchlove-postgres
+    environment:
+      POSTGRES_DB: touchlove_dev
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    container_name: touchlove-redis
+    ports:
+      - "6379:6379"
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: touchlove-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # UI
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: touchlove-backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: Host=postgres;Database=touchlove_dev;Username=dev;Password=dev123
+      Redis__ConnectionString: redis:6379
+      Email__Host: mailhog
+      Email__Port: 1025
+    ports:
+      - "5000:8080"
+    depends_on:
+      - postgres
+      - redis
+      - mailhog
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: touchlove-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:5000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

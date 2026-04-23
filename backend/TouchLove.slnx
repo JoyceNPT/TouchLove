@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TouchLove.API/TouchLove.API.csproj" />
+    <Project Path="src/TouchLove.Application/TouchLove.Application.csproj" />
+    <Project Path="src/TouchLove.Domain/TouchLove.Domain.csproj" />
+    <Project Path="src/TouchLove.Infrastructure/TouchLove.Infrastructure.csproj" />
+    <Project Path="src/TouchLove.Shared/TouchLove.Shared.csproj" />
+  </Folder>
+</Solution>

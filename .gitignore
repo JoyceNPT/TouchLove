@@ -1,0 +1,39 @@
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Build and Outputs
+bin/
+obj/
+publish/
+dist/
+build/
+node_modules/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Docker
+.docker/
+
+# Git
+.git/
+
+# User-specific files
+*.user
+*.userosscache
+*.sln.docuser
+
+# Logs
+*.log
+logs/
+
+# Infrastructure
+postgres_data/
