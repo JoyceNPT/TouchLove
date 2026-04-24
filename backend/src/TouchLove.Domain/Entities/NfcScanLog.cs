@@ -7,7 +7,7 @@ namespace TouchLove.Domain.Entities;
 public class NfcScanLog
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid CoupleId { get; set; }
+    public Guid? CoupleId { get; set; }
     public Guid KeychainId { get; set; }
     public DateTime ScannedAt { get; set; } = DateTime.UtcNow;
     public string? UserAgent { get; set; }

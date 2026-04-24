@@ -18,6 +18,7 @@ public class NfcScanLogConfiguration : IEntityTypeConfiguration<NfcScanLog>
         builder.HasOne(n => n.Couple)
             .WithMany(c => c.NfcScanLogs)
             .HasForeignKey(n => n.CoupleId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(n => n.Keychain)

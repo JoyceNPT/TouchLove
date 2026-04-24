@@ -1,42 +1,67 @@
 using Microsoft.AspNetCore.Mvc;
-using TouchLove.Application.Features.Couple;
-using TouchLove.Shared;
+using Microsoft.EntityFrameworkCore;
+using TouchLove.Application.Interfaces;
+using TouchLove.Domain.Entities;
 
 namespace TouchLove.API.Controllers.NFC;
 
 [ApiController]
+[Route("nfc")]
 public class NfcController : ControllerBase
 {
-    private readonly CoupleService _coupleService;
+    private readonly IApplicationDbContext _db;
     private readonly IConfiguration _config;
 
-    public NfcController(CoupleService coupleService, IConfiguration config)
+    public NfcController(IApplicationDbContext db, IConfiguration config)
     {
-        _coupleService = coupleService;
+        _db = db;
         _config = config;
     }
 
-    [HttpGet("/nfc/{keyId}")]
-    public async Task<IActionResult> Redirect(string keyId, CancellationToken ct)
+    [HttpGet("{keyId}")]
+    public async Task<IActionResult> RedirectNfc(string keyId, CancellationToken ct)
     {
-        var ua = Request.Headers.UserAgent.ToString();
-        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var keychain = await _db.Keychains
+            .Include(k => k.Couple)
+            .FirstOrDefaultAsync(k => k.KeyId == keyId, ct);
+
         var frontendUrl = _config["Frontend:Url"] ?? "http://localhost:3000";
 
-        var result = await _coupleService.HandleNfcScanAsync(keyId, ua, ip, ct);
-
-        return result.Type switch
+        if (keychain == null)
         {
-            NfcRedirectType.Activate => Redirect($"{frontendUrl}/activate/{result.Payload}"),
-            NfcRedirectType.Pair => Redirect($"{frontendUrl}/pair/{result.Payload}"),
-            NfcRedirectType.CouplePage => Redirect($"{frontendUrl}/c/{result.Payload}"),
-            NfcRedirectType.Revoked => Content("""
-                <html><body style="font-family:sans-serif;text-align:center;padding:40px">
-                <h2>💔 Keychain không hợp lệ</h2>
-                <p>Keychain này đã bị thu hồi. Vui lòng liên hệ hỗ trợ.</p>
-                </body></html>
-                """, "text/html"),
-            _ => NotFound(ApiResponse<string>.Fail("Keychain not found."))
-        };
+            return Redirect($"{frontendUrl}/?error=key_not_found");
+        }
+
+        // Log the scan (Fire and forget or async)
+        _db.NfcScanLogs.Add(new NfcScanLog
+        {
+            KeychainId = keychain.Id,
+            ScannedAt = DateTime.UtcNow,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            UserAgent = Request.Headers.UserAgent.ToString()
+        });
+
+        // 1. Not activated yet
+        if (keychain.UserId == null)
+        {
+            return Redirect($"{frontendUrl}/activate/{keyId}");
+        }
+
+        // 2. Activated but not paired
+        if (keychain.CoupleId == null)
+        {
+            return Redirect($"{frontendUrl}/pair/{keyId}");
+        }
+
+        // 3. Paired - Redirect to couple page
+        if (keychain.Couple != null)
+        {
+            keychain.Couple.NfcScanCount++;
+            await _db.SaveChangesAsync(ct);
+            return Redirect($"{frontendUrl}/c/{keychain.Couple.CoupleSlug}");
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return Redirect($"{frontendUrl}/");
     }
 }

@@ -5,6 +5,9 @@ import AuthLayout from './layouts/AuthLayout';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import CouplePage from './pages/CouplePage';
 import ActivateKeychain from './pages/ActivateKeychain';
 import Pairing from './pages/Pairing';
@@ -39,6 +42,9 @@ function App() {
           <Route element={<AuthLayout />}>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
             <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
           </Route>
 
           {/* Protected NFC Flows */}

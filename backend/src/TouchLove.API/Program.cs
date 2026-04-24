@@ -109,7 +109,6 @@ try
     // ── Infrastructure Services ───────────────────────────────────────
     builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
     builder.Services.AddScoped<IEmailService, MailKitEmailService>();
-    builder.Services.AddScoped<ICaptchaService, GoogleRecaptchaService>();
 
     builder.Services.AddHttpClient<IAiMessageService, GeminiAiMessageService>();
     builder.Services.AddHttpClient<ICaptchaService, GoogleRecaptchaService>();
