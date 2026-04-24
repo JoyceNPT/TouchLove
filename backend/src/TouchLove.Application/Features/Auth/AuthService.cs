@@ -317,6 +317,63 @@ public class AuthService
         });
     }
 
+    // ──────────────────────────────────────────────────────────────────
+    // NFC AUTO-LOGIN
+    // ──────────────────────────────────────────────────────────────────
+    public async Task<ApiResponse<LoginResponse>> LoginByNfcAsync(string keyId, CancellationToken ct = default)
+    {
+        var keychain = await _db.Keychains
+            .Include(k => k.User)
+            .FirstOrDefaultAsync(k => k.KeyId == keyId, ct);
+
+        if (keychain == null)
+            return ApiResponse<LoginResponse>.Fail("Chip NFC không hợp lệ.");
+
+        User user;
+        if (keychain.UserId == null)
+        {
+            // Create a shadow user for this NFC ID
+            user = new User
+                {
+                    UserName = $"nfc_{keyId}",
+                    Email = $"{keyId}@touchlove.local", // Placeholder email
+                    DisplayName = "Người dùng mới",
+                    IsActive = true,
+                    IsEmailVerified = true // Auto-verify for NFC users
+                };
+
+            var result = await _userManager.CreateAsync(user, Guid.NewGuid().ToString() + "Nfc123!");
+            if (!result.Succeeded)
+                return ApiResponse<LoginResponse>.Fail("Không thể khởi tạo tài khoản NFC.");
+
+            await _userManager.AddToRoleAsync(user, Constants.Roles.User);
+            _db.UserSettings.Add(new UserSetting { UserId = user.Id });
+
+            keychain.UserId = user.Id;
+            keychain.Status = Domain.Enums.KeychainStatus.Activated;
+            keychain.ActivatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
+        else
+        {
+            user = keychain.User!;
+        }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var accessToken = GenerateJwtToken(user, roles);
+        var (rawRefreshToken, refreshTokenEntity) = GenerateRefreshToken(user.Id, true);
+
+        _db.RefreshTokens.Add(refreshTokenEntity);
+        await _db.SaveChangesAsync(ct);
+
+        return ApiResponse<LoginResponse>.Ok(new LoginResponse(
+            AccessToken: accessToken,
+            RefreshToken: rawRefreshToken,
+            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First()),
+            ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes)
+        ));
+    }
+
     private string GenerateJwtToken(User user, IList<string> roles)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));

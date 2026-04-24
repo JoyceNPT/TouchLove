@@ -16,10 +16,28 @@ import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, setToken, setUser } = useAuthStore();
 
   useEffect(() => {
-    // Sync theme on mount
+    // 1. Check for token in URL (NFC auto-login redirect)
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    
+    if (urlToken) {
+      setToken(urlToken);
+      // Clean URL without reloading
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+      
+      // Fetch user profile to populate store
+      axios.get('/api/users/me', { headers: { Authorization: `Bearer ${urlToken}` } })
+        .then(res => {
+          if (res.data.success) setUser(res.data.data);
+        })
+        .catch(console.error);
+    }
+
+    // 2. Sync theme on mount
     const theme = localStorage.getItem('theme');
     if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');

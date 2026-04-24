@@ -43,6 +43,11 @@ public class CoupleService
             .Select(m => new MemoryPreviewDto(m.Id, _storage.GetPublicUrl(m.StoragePath), m.Caption, m.SortOrder))
             .ToListAsync(ct);
 
+        var todayMessage = await _db.DailyMessages
+            .Where(m => m.CoupleId == couple.Id && m.MessageDate == DateOnly.FromDateTime(DateTime.UtcNow))
+            .Select(m => m.Content)
+            .FirstOrDefaultAsync(ct);
+
         var dto = new CouplePageDto(
             Id: couple.Id,
             Slug: couple.CoupleSlug,
@@ -54,6 +59,7 @@ public class CoupleService
             NfcScanCount: couple.NfcScanCount,
             PartnerAName: couple.KeychainA?.User?.DisplayName,
             PartnerBName: couple.KeychainB?.User?.DisplayName,
+            TodayMessage: todayMessage ?? "Hãy luôn yêu thương và trân trọng nhau nhé! 💕",
             RecentMemories: recentMemories
         );
 
@@ -233,6 +239,7 @@ public record CouplePageDto(
     Guid Id, string Slug, string? CoupleName, DateOnly StartDate,
     string? Description, string? AvatarAUrl, string? AvatarBUrl,
     int NfcScanCount, string? PartnerAName, string? PartnerBName,
+    string TodayMessage,
     List<MemoryPreviewDto> RecentMemories);
 
 public record MemoryPreviewDto(Guid Id, string Url, string? Caption, int SortOrder);
