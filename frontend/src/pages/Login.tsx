@@ -26,7 +26,7 @@ const Login = () => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>({
+  } = useForm<any>({
     resolver: zodResolver(loginSchema),
   });
 
@@ -82,13 +82,13 @@ const Login = () => {
               placeholder="ten@example.com"
             />
           </div>
-          {errors.email && <p className="text-xs text-destructive px-1">{errors.email.message}</p>}
+          {errors.email && <p className="text-xs text-destructive px-1">{String(errors.email.message)}</p>}
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <label className="text-sm font-medium">Mật khẩu</label>
-            <Link to="/forgot-password" size="sm" className="text-xs text-primary hover:underline">
+            <Link to="/forgot-password" className="text-xs text-primary hover:underline">
               Quên mật khẩu?
             </Link>
           </div>
@@ -103,7 +103,7 @@ const Login = () => {
               placeholder="••••••••"
             />
           </div>
-          {errors.password && <p className="text-xs text-destructive px-1">{errors.password.message}</p>}
+          {errors.password && <p className="text-xs text-destructive px-1">{String(errors.password.message)}</p>}
         </div>
 
         <div className="flex items-center gap-2 px-1">

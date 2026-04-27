@@ -1,28 +1,9 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { User, Settings, Shield, Smartphone, Heart, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import axiosInstance from '../api/axiosInstance';
 import { Link } from 'react-router-dom';
 
 const Profile = () => {
   const { user } = useAuthStore();
-  const [profileData, setProfileData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // In a real app, fetch user profile and their keychain/couple status
-    const fetchProfile = async () => {
-      try {
-        // const res = await axiosInstance.get('/users/me');
-        // setProfileData(res.data.data);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
-
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
       <div className="flex items-center gap-6 mb-12">
@@ -62,6 +43,7 @@ const Profile = () => {
           icon={<Shield className="w-5 h-5 text-green-500" />} 
           title="Bảo mật" 
           description="Đổi mật khẩu và quản lý phiên đăng nhập"
+          link="/profile/security"
         />
 
         <ProfileItem 

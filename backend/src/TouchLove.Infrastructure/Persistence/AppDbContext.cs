@@ -22,10 +22,18 @@ public class AppDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>, I
     public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
     public DbSet<NfcScanLog> NfcScanLogs => Set<NfcScanLog>();
     public DbSet<UnpairRequest> UnpairRequests => Set<UnpairRequest>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // Global query filter for soft delete
+        builder.Entity<Product>().HasQueryFilter(p => !p.IsDeleted);
+        builder.Entity<User>().HasQueryFilter(u => !u.IsDeleted);
 
         // Apply all IEntityTypeConfiguration from this assembly
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
@@ -50,6 +58,10 @@ public class AppDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>, I
             if (entry.Entity is Domain.Common.BaseEntity baseEntity)
             {
                 baseEntity.UpdatedAt = DateTime.UtcNow;
+            }
+            if (entry.Entity is User user)
+            {
+                user.UpdatedAt = DateTime.UtcNow;
             }
             if (entry.Entity is UserSetting setting)
             {

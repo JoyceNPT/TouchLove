@@ -3,6 +3,7 @@ using TouchLove.Application.Interfaces;
 using TouchLove.Domain.Entities;
 using TouchLove.Domain.Enums;
 using TouchLove.Shared;
+using TouchLove.Application.Features.Couple;
 
 namespace TouchLove.Application.Features.Message;
 
@@ -11,12 +12,14 @@ public class MessageService
     private readonly IApplicationDbContext _db;
     private readonly ICacheService _cache;
     private readonly IAiMessageService _ai;
+    private readonly MilestoneService _milestone;
 
-    public MessageService(IApplicationDbContext db, ICacheService cache, IAiMessageService ai)
+    public MessageService(IApplicationDbContext db, ICacheService cache, IAiMessageService ai, MilestoneService milestone)
     {
         _db = db;
         _cache = cache;
         _ai = ai;
+        _milestone = milestone;
     }
 
     // ─── Today's message (on-demand, cached) ─────────────────────────
@@ -134,7 +137,10 @@ public class MessageService
         {
             // Try AI
             var days = date.DayNumber - couple.StartDate.DayNumber;
-            var aiContent = await _ai.GenerateAsync(couple.CoupleName ?? "cặp đôi", days, ct);
+            var milestone = _milestone.GetTodayMilestone(couple.StartDate.ToDateTime(TimeOnly.MinValue));
+            var promptContext = milestone != null ? $"Hôm nay là kỷ niệm {milestone.Title}." : string.Empty;
+            
+            var aiContent = await _ai.GenerateAsync(couple.CoupleName ?? "cặp đôi", days, ct, promptContext);
 
             if (aiContent != null)
             {

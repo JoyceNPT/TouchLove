@@ -18,6 +18,10 @@ public interface IApplicationDbContext
     DbSet<MessageTemplate> MessageTemplates { get; }
     DbSet<NfcScanLog> NfcScanLogs { get; }
     DbSet<UnpairRequest> UnpairRequests { get; }
+    DbSet<Supplier> Suppliers { get; }
+    DbSet<Product> Products { get; }
+    DbSet<Order> Orders { get; }
+    DbSet<OrderItem> OrderItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -1,11 +1,20 @@
 import { Outlet, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
-import { Moon, Sun, Heart, User } from 'lucide-react';
+import { Moon, Sun, Heart, User, ShoppingCart, Languages } from 'lucide-react';
+import { useCartStore } from '../store/useCartStore';
+import { useTranslation } from 'react-i18next';
 
 const MainLayout = () => {
   const { user, isAuthenticated, clearAuth } = useAuthStore();
   const { isDarkMode, toggleDarkMode } = useUIStore();
+  const totalItems = useCartStore((state) => state.totalItems());
+  const { i18n, t } = useTranslation();
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'vi' ? 'en' : 'vi';
+    i18n.changeLanguage(newLang);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
@@ -20,6 +29,24 @@ const MainLayout = () => {
           </Link>
 
           <nav className="flex items-center gap-4">
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary transition-colors text-sm font-bold uppercase"
+              aria-label="Change language"
+            >
+              <Languages className="w-4 h-4" />
+              {i18n.language.split('-')[0]}
+            </button>
+
+            <Link to="/cart" className="p-2 rounded-full hover:bg-secondary transition-colors relative">
+              <ShoppingCart className="w-5 h-5" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
+
             <button
               onClick={toggleDarkMode}
               className="p-2 rounded-full hover:bg-secondary transition-colors"
@@ -40,11 +67,14 @@ const MainLayout = () => {
                   </div>
                   <span className="hidden sm:inline font-medium">{user?.displayName}</span>
                 </Link>
+                <Link to="/my-orders" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
+                  Đơn hàng
+                </Link>
                 <button
                   onClick={clearAuth}
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Đăng xuất
+                  {t('common.logout')}
                 </button>
               </div>
             ) : (
@@ -53,13 +83,13 @@ const MainLayout = () => {
                   to="/login"
                   className="px-4 py-2 text-sm font-medium hover:text-primary transition-colors"
                 >
-                  Đăng nhập
+                  {t('common.login')}
                 </Link>
                 <Link
                   to="/register"
                   className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-opacity"
                 >
-                  Bắt đầu ngay
+                  {t('home.start_journey')}
                 </Link>
               </div>
             )}

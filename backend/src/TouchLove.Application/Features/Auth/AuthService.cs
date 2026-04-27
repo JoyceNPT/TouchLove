@@ -42,49 +42,72 @@ public class AuthService
     // ──────────────────────────────────────────────────────────────────
     public async Task<ApiResponse<string>> RegisterAsync(RegisterRequest req, CancellationToken ct = default)
     {
-        if (!await _captcha.VerifyAsync(req.CaptchaToken, ct))
-            return ApiResponse<string>.Fail("CAPTCHA validation failed.");
+        if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
+            return ApiResponse<string>.Fail("Email và mật khẩu không được để trống.");
 
-        // Check email uniqueness without revealing existence (return 200 always)
+        if (!await _captcha.VerifyAsync(req.CaptchaToken, ct))
+            return ApiResponse<string>.Fail("Xác thực CAPTCHA không thành công. Vui lòng thử lại.");
+
         var existing = await _userManager.FindByEmailAsync(req.Email);
         if (existing != null)
         {
-            // Send verification email again (silent, don't reveal user exists)
-            return ApiResponse<string>.Ok("Registration processed. Please check your email.");
+            if (existing.IsEmailVerified)
+                return ApiResponse<string>.Fail("Email này đã được đăng ký và xác thực. Vui lòng đăng nhập.");
+            
+            // Re-send verification for unverified users
+            var oldTokens = await _db.EmailVerificationTokens
+                .Where(t => t.UserId == existing.Id && !t.IsUsed)
+                .ToListAsync(ct);
+            foreach(var t in oldTokens) t.IsUsed = true;
+            
+            var rawToken = GenerateSecureToken();
+            _db.EmailVerificationTokens.Add(new EmailVerificationToken
+            {
+                UserId = existing.Id,
+                TokenHash = HashSha256(rawToken),
+                ExpiresAt = DateTime.UtcNow.AddHours(Constants.Auth.EmailVerificationHours)
+            });
+            await _db.SaveChangesAsync(ct);
+
+            var link = $"{_config["Frontend:Url"]}/verify-email?token={rawToken}";
+            await _email.SendEmailVerificationAsync(req.Email, link, ct);
+            
+            return ApiResponse<string>.Ok("Tài khoản đã tồn tại nhưng chưa xác thực. Một mã xác thực mới đã được gửi đến email của bạn.");
         }
 
         var user = new User
         {
             UserName = req.Email,
             Email = req.Email,
-            DisplayName = req.DisplayName.Trim()
+            DisplayName = req.DisplayName.Trim(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         var result = await _userManager.CreateAsync(user, req.Password);
         if (!result.Succeeded)
-            return ApiResponse<string>.Fail("Registration failed.", result.Errors.Select(e => e.Description).ToList());
+        {
+            var errors = result.Errors.Select(e => e.Description).ToList();
+            return ApiResponse<string>.Fail("Đăng ký không thành công.", errors);
+        }
 
         await _userManager.AddToRoleAsync(user, Constants.Roles.User);
-
-        // Create settings
         _db.UserSettings.Add(new UserSetting { UserId = user.Id });
 
-        // Generate email verification token
-        var rawToken = GenerateSecureToken();
-        var tokenHash = HashSha256(rawToken);
+        var verifyRaw = GenerateSecureToken();
         _db.EmailVerificationTokens.Add(new EmailVerificationToken
         {
             UserId = user.Id,
-            TokenHash = tokenHash,
+            TokenHash = HashSha256(verifyRaw),
             ExpiresAt = DateTime.UtcNow.AddHours(Constants.Auth.EmailVerificationHours)
         });
 
         await _db.SaveChangesAsync(ct);
 
-        var verifyLink = $"{_config["Frontend:Url"]}/verify-email?token={rawToken}";
+        var verifyLink = $"{_config["Frontend:Url"]}/verify-email?token={verifyRaw}";
         await _email.SendEmailVerificationAsync(req.Email, verifyLink, ct);
 
-        return ApiResponse<string>.Ok("Registration processed. Please check your email.");
+        return ApiResponse<string>.Ok("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -129,7 +152,7 @@ public class AuthService
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: rawRefreshToken,
-            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First()),
+            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive),
             ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes)
         ));
     }
@@ -273,6 +296,17 @@ public class AuthService
     // ──────────────────────────────────────────────────────────────────
     // LOGOUT
     // ──────────────────────────────────────────────────────────────────
+    public async Task<ApiResponse<UserDto>> GetUserProfileAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user == null) return ApiResponse<UserDto>.Fail("User not found.");
+        
+        if (!user.IsActive) return ApiResponse<UserDto>.Fail("Account suspended.");
+
+        var roles = await _userManager.GetRolesAsync(user);
+        return ApiResponse<UserDto>.Ok(new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive));
+    }
+
     public async Task<ApiResponse<string>> LogoutAsync(string rawToken, CancellationToken ct = default)
     {
         if (!string.IsNullOrEmpty(rawToken))
@@ -287,6 +321,30 @@ public class AuthService
             }
         }
         return ApiResponse<string>.Ok("Logged out successfully.");
+    }
+
+    public async Task<ApiResponse<string>> ChangePasswordAsync(Guid userId, ChangePasswordRequest req, CancellationToken ct = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user == null) return ApiResponse<string>.Fail("Người dùng không tồn tại.");
+
+        var result = await _userManager.ChangePasswordAsync(user, req.CurrentPassword, req.NewPassword);
+        if (!result.Succeeded)
+        {
+            var errors = result.Errors.Select(e => e.Description).ToList();
+            return ApiResponse<string>.Fail("Đổi mật khẩu không thành công.", errors);
+        }
+
+        // Revoke all refresh tokens for security
+        var tokens = await _db.RefreshTokens.Where(t => t.UserId == userId && !t.IsRevoked).ToListAsync(ct);
+        foreach (var t in tokens)
+        {
+            t.IsRevoked = true;
+            t.RevokedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync(ct);
+
+        return ApiResponse<string>.Ok("Đổi mật khẩu thành công. Vui lòng đăng nhập lại với mật khẩu mới.");
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -369,7 +427,7 @@ public class AuthService
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: rawRefreshToken,
-            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First()),
+            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive),
             ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes)
         ));
     }
@@ -433,6 +491,7 @@ public class AuthService
 // ── DTOs ────────────────────────────────────────────────────────────
 public record RegisterRequest(string Email, string Password, string DisplayName, string CaptchaToken);
 public record LoginRequest(string Email, string Password, bool RememberMe, string CaptchaToken);
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record LoginResponse(string AccessToken, string RefreshToken, UserDto User, DateTime ExpiresAt);
 public record RefreshResponse(string AccessToken, string RefreshToken, DateTime ExpiresAt);
-public record UserDto(Guid Id, string DisplayName, string Email, string? AvatarUrl, string Role);
+public record UserDto(Guid Id, string DisplayName, string Email, string? AvatarUrl, string Role, bool IsActive);

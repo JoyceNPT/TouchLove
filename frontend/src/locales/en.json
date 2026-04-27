@@ -1,0 +1,35 @@
+{
+  "common": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "profile": "Profile",
+    "settings": "Settings",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "home": "Home",
+    "cart": "Cart",
+    "checkout": "Checkout",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "home": {
+    "hero_title": "Connect love with a single touch",
+    "hero_subtitle": "TouchLove turns handmade crochet keychains into digital bridges.",
+    "start_journey": "Start journey",
+    "view_demo": "View demo",
+    "why_choose": "Why choose TouchLove?",
+    "store_title": "Gifts from the heart",
+    "add_to_cart": "Add to cart"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "confirm_password": "Confirm password",
+    "display_name": "Display name",
+    "already_have_account": "Already have an account?",
+    "dont_have_account": "Don't have an account?"
+  }
+}

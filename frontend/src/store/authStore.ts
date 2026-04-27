@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useCartStore } from './useCartStore';
 
 interface User {
   id: string;
@@ -40,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () => {
         localStorage.removeItem('accessToken');
         set({ user: null, accessToken: null, isAuthenticated: false });
+        useCartStore.getState().clearCart();
       },
       updateUser: (updatedUser) =>
         set((state) => ({

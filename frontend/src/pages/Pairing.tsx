@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Send, Users, ArrowRight, Loader2, Copy, Check, Sparkles } from 'lucide-react';
 import axios from 'axios';
 
 const Pairing = () => {
-  const { keyId } = useParams<{ keyId: string }>();
   const navigate = useNavigate();
   const [mode, setMode] = useState<'selection' | 'invite' | 'accept'>('selection');
   const [loading, setLoading] = useState(false);

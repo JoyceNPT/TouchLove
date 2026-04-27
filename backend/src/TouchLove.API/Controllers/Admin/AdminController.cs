@@ -39,7 +39,12 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UnblockUser(Guid userId, CancellationToken ct) => Ok(await _adminService.UnblockUserAsync(userId, ct));
 
     // ─── Keychains ─────────────────────────────────────────────────────
-    [HttpPost("keychains/bulk-create")]
+    [HttpGet("keychains")]
+    public async Task<IActionResult> GetKeychains([FromQuery] string? search, [FromQuery] string? status,
+        [FromQuery] int page = 1, [FromQuery] int size = 20, CancellationToken ct = default)
+        => Ok(await _adminService.GetKeychainsAsync(search, status, page, size, ct));
+
+    [HttpPost("keychains/bulk")]
     public async Task<IActionResult> BulkCreate([FromBody] BulkCreateRequest req, CancellationToken ct)
         => Ok(await _adminService.BulkCreateKeychainsAsync(req.Count, ct));
 

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TouchLove.Application.Features.Auth;
 using TouchLove.Application.Interfaces;
 using TouchLove.Domain.Entities;
 

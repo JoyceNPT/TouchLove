@@ -102,7 +102,7 @@ public class AdminService
             var keyId = Guid.NewGuid().ToString();
             var keychain = new Domain.Entities.Keychain { KeyId = keyId };
             _db.Keychains.Add(keychain);
-            result.Add(new KeychainSummaryDto(keychain.Id, keyId));
+            result.Add(new KeychainSummaryDto(keychain.Id, keychain.KeyId, keychain.Status, keychain.CreatedAt, keychain.ActivatedAt));
         }
         await _db.SaveChangesAsync(ct);
         return ApiResponse<List<KeychainSummaryDto>>.Ok(result, $"{count} keychains created.");
@@ -127,6 +127,28 @@ public class AdminService
         keychain.RevokedAt = null;
         await _db.SaveChangesAsync(ct);
         return ApiResponse<string>.Ok("Keychain reactivated.");
+    }
+    public async Task<ApiResponse<PagedResult<KeychainSummaryDto>>> GetKeychainsAsync(string? search, string? status, int page, int size, CancellationToken ct = default)
+    {
+        var query = _db.Keychains.IgnoreQueryFilters().AsQueryable();
+        
+        if (!string.IsNullOrEmpty(search))
+            query = query.Where(k => k.KeyId.Contains(search));
+        
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<KeychainStatus>(status, true, out var ks))
+            query = query.Where(k => k.Status == ks);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(k => k.CreatedAt)
+            .Skip((page - 1) * size).Take(size)
+            .Select(k => new KeychainSummaryDto(k.Id, k.KeyId, k.Status, k.CreatedAt, k.ActivatedAt))
+            .ToListAsync(ct);
+
+        return ApiResponse<PagedResult<KeychainSummaryDto>>.Ok(new PagedResult<KeychainSummaryDto>
+        {
+            Items = items, TotalCount = total, Page = page, PageSize = size
+        });
     }
 
     // ─── Templates ─────────────────────────────────────────────────────
@@ -193,5 +215,5 @@ public record AdminStatsDto(int TotalCouples, int ActiveCouples, int TotalUsers,
 public record TemplateStats(int Draft, int Published, int Archived);
 public record DailyCount(DateTime Date, int Count);
 public record AdminUserDto(Guid Id, string DisplayName, string Email, bool IsActive, bool IsEmailVerified, DateTime CreatedAt);
-public record KeychainSummaryDto(Guid Id, string KeyId);
+public record KeychainSummaryDto(Guid Id, string KeyId, KeychainStatus Status, DateTime CreatedAt, DateTime? ActivatedAt);
 public record TemplateDto(Guid Id, string Content, string Language, string? Category, TemplateStatus Status, DateTime? PublishedAt, DateTime CreatedAt);

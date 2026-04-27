@@ -92,7 +92,7 @@ public static class DataSeeder
                     Id = Keychain1Id,
                     KeyId = "key-aaa-001",
                     UserId = User1Id,
-                    CoupleId = CoupleId,
+                    CoupleId = null, // Set later to break circular dependency
                     Status = KeychainStatus.Paired,
                     ActivatedAt = new DateTime(2024, 2, 14, 0, 0, 0, DateTimeKind.Utc),
                     CreatedAt = DateTime.UtcNow,
@@ -103,9 +103,16 @@ public static class DataSeeder
                     Id = Keychain2Id,
                     KeyId = "key-bbb-002",
                     UserId = User2Id,
-                    CoupleId = CoupleId,
+                    CoupleId = null, // Set later to break circular dependency
                     Status = KeychainStatus.Paired,
                     ActivatedAt = new DateTime(2024, 2, 14, 0, 0, 0, DateTimeKind.Utc),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Keychain
+                {
+                    KeyId = "new-chip-123",
+                    Status = KeychainStatus.Available,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 }
@@ -130,6 +137,14 @@ public static class DataSeeder
                 UpdatedAt = DateTime.UtcNow
             });
         }
+
+        await context.SaveChangesAsync();
+
+        // ── Step 4.5: Update Keychains with CoupleId ──────────────────
+        var k1 = await context.Keychains.FindAsync(Keychain1Id);
+        var k2 = await context.Keychains.FindAsync(Keychain2Id);
+        if (k1 != null) k1.CoupleId = CoupleId;
+        if (k2 != null) k2.CoupleId = CoupleId;
 
         await context.SaveChangesAsync();
 
@@ -211,6 +226,41 @@ public static class DataSeeder
                     CreatedAt = DateTime.UtcNow.AddDays(-i * 10),
                     UpdatedAt = DateTime.UtcNow
                 });
+            }
+        }
+
+        // ── Order 8: Products & Suppliers ─────────────────────────────
+        Guid supplierId;
+        var supplier = await context.Suppliers.FirstOrDefaultAsync(s => s.Name == "Xưởng Len TouchLove");
+        if (supplier == null)
+        {
+            supplier = new Supplier
+            {
+                Name = "Xưởng Len TouchLove",
+                Phone = "0901234567",
+                Email = "xuonglen@touchlove.local",
+                Address = "123 Đường Láng, Hà Nội"
+            };
+            context.Suppliers.Add(supplier);
+            await context.SaveChangesAsync();
+        }
+        supplierId = supplier.Id;
+
+        var productsToSeed = new List<Product>
+        {
+            new() { Name = "Móc khóa Gấu Yêu", Slug = "moc-khoa-gau-yeu", Price = 150000, StockQuantity = 50, SupplierId = supplierId, Description = "Móc khóa len hình gấu nâu dễ thương gắn chip NFC cao cấp, cho phép lưu giữ những lời nhắn ngọt ngào.", ImageUrls = "[\"https://images.unsplash.com/photo-1559440666-374213642921?auto=format&fit=crop&q=80&w=600\"]" },
+            new() { Name = "Móc khóa Thỏ Trắng", Slug = "moc-khoa-tho-trang", Price = 155000, StockQuantity = 30, SupplierId = supplierId, Description = "Móc khóa len hình thỏ trắng tinh khôi, món quà tuyệt vời cho bạn gái với công nghệ TouchLove NFC.", ImageUrls = "[\"https://images.unsplash.com/photo-1585110396054-c8112c60b201?auto=format&fit=crop&q=80&w=600\"]" },
+            new() { Name = "Cặp đôi Mèo Mun", Slug = "cap-doi-meo-mun", Price = 280000, StockQuantity = 20, SupplierId = supplierId, Description = "Bộ 2 móc khóa mèo mun phối màu đen trắng sang trọng, gắn kết trái tim hai người yêu nhau.", ImageUrls = "[\"https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=600\"]" },
+            new() { Name = "Móc khóa Heo Hồng", Slug = "moc-khoa-heo-hong", Price = 145000, StockQuantity = 45, SupplierId = supplierId, Description = "Heo hồng mập mạp đáng yêu, là biểu tượng cho sự ấm áp và sung túc.", ImageUrls = "[\"https://images.unsplash.com/photo-1570158268183-d296b2892211?auto=format&fit=crop&q=80&w=600\"]" },
+            new() { Name = "Móc khóa Shiba Inu", Slug = "moc-khoa-shiba-inu", Price = 165000, StockQuantity = 25, SupplierId = supplierId, Description = "Chú chó Shiba Inu nổi tiếng với nụ cười rạng rỡ, mang lại niềm vui mỗi ngày.", ImageUrls = "[\"https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&q=80&w=600\"]" },
+            new() { Name = "Móc khóa Cú Mèo", Slug = "moc-khoa-cu-meo", Price = 160000, StockQuantity = 15, SupplierId = supplierId, Description = "Cú mèo thông thái cho những cặp đôi thích sự sâu sắc và bí ẩn.", ImageUrls = "[\"https://images.unsplash.com/photo-1544211911-2f01ad4d409b?auto=format&fit=crop&q=80&w=600\"]" }
+        };
+
+        foreach (var p in productsToSeed)
+        {
+            if (!await context.Products.AnyAsync(x => x.Slug == p.Slug))
+            {
+                context.Products.Add(p);
             }
         }
 

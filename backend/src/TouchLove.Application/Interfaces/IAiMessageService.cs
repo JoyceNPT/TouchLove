@@ -7,5 +7,5 @@ public interface IAiMessageService
     /// </summary>
     /// <param name="coupleName">Name of the couple (e.g., "An & Bình")</param>
     /// <param name="daysTogether">Number of days they've been together</param>
-    Task<string?> GenerateAsync(string coupleName, int daysTogether, CancellationToken ct = default);
+    Task<string?> GenerateAsync(string coupleName, int daysTogether, CancellationToken ct = default, string? context = null);
 }

@@ -83,6 +83,14 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<ApiResponse<string>>> ResetPassword([FromBody] ResetPasswordRequest req, CancellationToken ct)
         => Ok(await _authService.ResetPasswordAsync(req.Token, req.NewPassword, ct));
 
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<ActionResult<ApiResponse<string>>> ChangePassword([FromBody] ChangePasswordRequest req, CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        return Ok(await _authService.ChangePasswordAsync(userId, req, ct));
+    }
+
     [HttpGet("verify-email")]
     public async Task<ActionResult<ApiResponse<string>>> VerifyEmail([FromQuery] string token, CancellationToken ct)
         => Ok(await _authService.VerifyEmailAsync(token, ct));

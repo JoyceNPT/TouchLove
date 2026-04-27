@@ -19,7 +19,7 @@ public class GeminiAiMessageService : IAiMessageService
         _logger = logger;
     }
 
-    public async Task<string?> GenerateAsync(string coupleName, int daysTogether, CancellationToken ct = default)
+    public async Task<string?> GenerateAsync(string coupleName, int daysTogether, CancellationToken ct = default, string? context = null)
     {
         var apiKey = _config["Gemini:ApiKey"];
         if (string.IsNullOrEmpty(apiKey))
@@ -30,7 +30,7 @@ public class GeminiAiMessageService : IAiMessageService
 
         try
         {
-            var prompt = $"Tạo một thông điệp tình cảm ngắn gọn (2-3 câu, tiếng Việt) cho cặp đôi tên {coupleName}, đã yêu nhau {daysTogether} ngày. Lãng mạn, ấm áp, chân thật, không sáo rỗng.";
+            var prompt = $"Tạo một thông điệp tình cảm ngắn gọn (2-3 câu, tiếng Việt) cho cặp đôi tên {coupleName}, đã yêu nhau {daysTogether} ngày. {context} Lãng mạn, ấm áp, chân thật, không sáo rỗng.";
 
             var requestBody = new
             {

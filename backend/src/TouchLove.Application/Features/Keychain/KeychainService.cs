@@ -108,7 +108,7 @@ public class KeychainService
         // Generate unique slug
         var slug = await GenerateUniqueSlugAsync(partnerA.DisplayName, partnerB.DisplayName, ct);
 
-        var couple = new Couple
+        var couple = new TouchLove.Domain.Entities.Couple
         {
             KeychainAId = invitation.InitiatorKeychainId,
             KeychainBId = partnerBKeychain.Id,

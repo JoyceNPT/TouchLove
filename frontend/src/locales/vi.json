@@ -1,0 +1,35 @@
+{
+  "common": {
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "logout": "Đăng xuất",
+    "profile": "Trang cá nhân",
+    "settings": "Cài đặt",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "back": "Quay lại",
+    "home": "Trang chủ",
+    "cart": "Giỏ hàng",
+    "checkout": "Thanh toán",
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "success": "Thành công"
+  },
+  "home": {
+    "hero_title": "Gắn kết tình yêu qua một cú chạm",
+    "hero_subtitle": "TouchLove biến những chiếc móc khóa len thủ công thành cầu nối kỹ thuật số.",
+    "start_journey": "Bắt đầu hành trình",
+    "view_demo": "Xem demo",
+    "why_choose": "Tại sao chọn TouchLove?",
+    "store_title": "Món quà từ trái tim",
+    "add_to_cart": "Thêm vào giỏ"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Mật khẩu",
+    "confirm_password": "Xác nhận mật khẩu",
+    "display_name": "Tên hiển thị",
+    "already_have_account": "Đã có tài khoản?",
+    "dont_have_account": "Chưa có tài khoản?"
+  }
+}

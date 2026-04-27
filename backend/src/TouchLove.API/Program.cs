@@ -7,12 +7,16 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using StackExchange.Redis;
 using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+using TouchLove.API.Hubs;
+using TouchLove.API.Middleware;
 using TouchLove.Application.Features.Admin;
 using TouchLove.Application.Features.Album;
 using TouchLove.Application.Features.Auth;
 using TouchLove.Application.Features.Couple;
 using TouchLove.Application.Features.Keychain;
 using TouchLove.Application.Features.Message;
+using TouchLove.Application.Features.Store;
 using TouchLove.Application.Interfaces;
 using TouchLove.Domain.Entities;
 using TouchLove.Infrastructure.BackgroundJobs;
@@ -20,6 +24,8 @@ using TouchLove.Infrastructure.Persistence;
 using TouchLove.Infrastructure.Persistence.Seeding;
 using TouchLove.Infrastructure.Services;
 using TouchLove.Infrastructure.Storage;
+using TouchLove.API.Hubs;
+
 
 // ── Serilog bootstrap ─────────────────────────────────────────────────
 Log.Logger = new LoggerConfiguration()
@@ -85,16 +91,9 @@ try
     builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
     // ── Hangfire ──────────────────────────────────────────────────────
-    builder.Services.AddHangfire(config => config
-        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UsePostgreSqlStorage(c => c.UseNpgsqlClientFactory(NpgsqlClientFactory.Instance)));
 
-    // Hack: Hangfire Postgres needs this inline because the factory builder needs the connection string
     builder.Services.AddHangfire(config =>
-        config.UsePostgreSqlStorage(c =>
-            c.UseConnectionString(cs)));
+        config.UsePostgreSqlStorage(options => options.UseNpgsqlConnection(cs)));
 
     builder.Services.AddHangfireServer();
 
@@ -105,6 +104,9 @@ try
     builder.Services.AddScoped<AlbumService>();
     builder.Services.AddScoped<MessageService>();
     builder.Services.AddScoped<AdminService>();
+    builder.Services.AddScoped<MilestoneService>();
+    builder.Services.AddScoped<StoreService>();
+    builder.Services.AddScoped<AdminStoreService>();
 
     // ── Infrastructure Services ───────────────────────────────────────
     builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
@@ -131,30 +133,10 @@ try
     }));
 
     // ── Controllers + Swagger ─────────────────────────────────────────
+    // ── Controllers ──────────────────────────────────────────────────
     builder.Services.AddControllers();
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen(c =>
-    {
-        c.SwaggerDoc("v1", new() { Title = "TouchLove API", Version = "v1" });
-        c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-        {
-            Name = "Authorization", Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-            Scheme = "Bearer", BearerFormat = "JWT", In = Microsoft.OpenApi.Models.ParameterLocation.Header
-        });
-        c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-        {
-            {
-                new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-                {
-                    Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                    {
-                        Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer"
-                    }
-                },
-                Array.Empty<string>()
-            }
-        });
-    });
+    builder.Services.AddSignalR();
+
 
     // ── File upload size limit ────────────────────────────────────────
     builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(opt =>
@@ -179,8 +161,7 @@ try
     // ── Middleware pipeline ───────────────────────────────────────────
     if (app.Environment.IsDevelopment())
     {
-        app.UseSwagger();
-        app.UseSwaggerUI();
+        // Development-only middleware
     }
 
     app.UseSerilogRequestLogging();
@@ -190,6 +171,7 @@ try
     app.UseStaticFiles();
 
     app.UseAuthentication();
+    app.UseUserStatusCheck(); // Check if user is locked
     app.UseAuthorization();
 
     // Hangfire dashboard (dev only)
@@ -221,6 +203,8 @@ try
         j => j.ExecuteAsync(), "0 4 * * 0");
 
     app.MapControllers();
+    app.MapHub<CoupleHub>("/hubs/couple");
+
 
     await app.RunAsync();
 }

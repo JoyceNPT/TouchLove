@@ -21,6 +21,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 const Register = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [details, setDetails] = useState<string[]>([]);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,6 +36,7 @@ const Register = () => {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
     setError(null);
+    setDetails([]);
     try {
       const response = await axiosInstance.post('/auth/register', {
         ...data,
@@ -45,9 +47,11 @@ const Register = () => {
         setIsSuccess(true);
       } else {
         setError(response.data.message);
+        if (response.data.errors) setDetails(response.data.errors);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Đã có lỗi xảy ra. Vui lòng thử lại.');
+      if (err.response?.data?.errors) setDetails(err.response?.data?.errors);
     } finally {
       setIsLoading(false);
     }
@@ -84,9 +88,16 @@ const Register = () => {
       </div>
 
       {error && (
-        <div className="bg-destructive/10 text-destructive p-4 rounded-2xl flex items-center gap-3 text-sm animate-shake">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          {error}
+        <div className="bg-destructive/10 text-destructive p-4 rounded-2xl space-y-2 text-sm animate-shake">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="font-bold">{error}</span>
+          </div>
+          {details.length > 0 && (
+            <ul className="list-disc list-inside ml-8 opacity-80">
+              {details.map((d, i) => <li key={i}>{d}</li>)}
+            </ul>
+          )}
         </div>
       )}
 
