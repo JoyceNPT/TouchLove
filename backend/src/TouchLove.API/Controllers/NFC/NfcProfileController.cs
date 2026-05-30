@@ -74,6 +74,10 @@ public class NfcProfileController : ControllerBase
             }
         }
 
+        var pairingPending = keychain.Status == KeychainStatus.Activated
+            ? await _keychainService.GetPairingPendingForUserAsync(userId, ct)
+            : null;
+
         var profile = new NfcProfileDto(
             Id: user.Id,
             DisplayName: user.DisplayName,
@@ -89,7 +93,10 @@ public class NfcProfileController : ControllerBase
             IsPaired: keychain.Status == KeychainStatus.Paired,
             CoupleSlug: keychain.Couple?.CoupleSlug,
             InviteCode: inviteCode,
-            CoupleId: keychain.CoupleId
+            CoupleId: keychain.CoupleId,
+            PairingPendingRole: pairingPending?.Role,
+            PairingPendingPartnerName: pairingPending?.PartnerName,
+            PairingPendingInvitationId: pairingPending?.InvitationId
         );
 
         return Ok(ApiResponse<NfcProfileDto>.Ok(profile));
@@ -241,11 +248,11 @@ public class NfcProfileController : ControllerBase
         var keychains = await _db.Keychains
             .Include(k => k.User)
             .IgnoreQueryFilters()
-            .Where(k => k.Status == KeychainStatus.Activated && k.User != null && k.User.IsProfilePublic)
+            .Where(k => k.Status == KeychainStatus.Activated && k.CoupleId == null && k.User != null && k.User.IsProfilePublic)
             .ToListAsync(ct);
 
         var activeInvitations = await _db.PairingInvitations
-            .Where(i => !i.IsUsed && i.ExpiresAt > DateTime.UtcNow)
+            .Where(i => !i.IsUsed && !i.IsPendingConfirmation && i.ExpiresAt > DateTime.UtcNow)
             .ToDictionaryAsync(i => i.InitiatorKeychainId, i => i.InviteCode, ct);
 
         var publicUnpaired = keychains.Select(k => {
@@ -432,7 +439,10 @@ public record NfcProfileDto(
     bool IsPaired,
     string? CoupleSlug,
     string? InviteCode,
-    Guid? CoupleId = null
+    Guid? CoupleId = null,
+    string? PairingPendingRole = null,
+    string? PairingPendingPartnerName = null,
+    Guid? PairingPendingInvitationId = null
 );
 
 public record UpdateNfcProfileRequest(

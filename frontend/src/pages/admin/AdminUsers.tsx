@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import axiosInstance from '../../api/axiosInstance';
 import { toast } from '../../store/useToastStore';
+import ConfirmModal from '../../components/shared/ConfirmModal';
 
 interface User {
   id: string;
@@ -23,18 +24,27 @@ interface User {
   gender?: string;
   dateOfBirth?: string;
   bio?: string;
+  userType: string;
 }
 
 const AdminUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [userTypeFilter, setUserTypeFilter] = useState<string>(''); // '' means all
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning' as 'danger' | 'warning' | 'info',
+    onConfirm: () => {}
+  });
 
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const res = await axiosInstance.get('/admin/users');
+      const res = await axiosInstance.get(`/admin/users?userType=${userTypeFilter}`);
       if (res.data.success) setUsers(res.data.data.items);
     } catch (err) {
       console.error('Failed to fetch users', err);
@@ -45,23 +55,30 @@ const AdminUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [userTypeFilter]);
 
   const toggleUserStatus = async (user: User) => {
     const action = user.isActive ? 'block' : 'unblock';
-    if (!confirm(`Bạn có chắc muốn ${action === 'block' ? 'khóa' : 'mở khóa'} người dùng này?`)) return;
-
-    try {
-      const res = await axiosInstance.post(`/admin/users/${user.id}/${action}`);
-      if (res.data.success) {
-        setUsers(prev => prev.map(u => 
-          u.id === user.id ? { ...u, isActive: !u.isActive } : u
-        ));
-        toast.success(`${user.isActive ? 'Khóa' : 'Mở khóa'} người dùng thành công!`);
+    
+    setConfirmConfig({
+      isOpen: true,
+      title: user.isActive ? 'Khóa người dùng' : 'Mở khóa người dùng',
+      message: `Bạn có chắc muốn ${user.isActive ? 'khóa' : 'mở khóa'} người dùng này?`,
+      type: user.isActive ? 'danger' : 'info',
+      onConfirm: async () => {
+        try {
+          const res = await axiosInstance.post(`/admin/users/${user.id}/${action}`);
+          if (res.data.success) {
+            setUsers(prev => prev.map(u => 
+              u.id === user.id ? { ...u, isActive: !u.isActive } : u
+            ));
+            toast.success(`${user.isActive ? 'Khóa' : 'Mở khóa'} người dùng thành công!`);
+          }
+        } catch (err) {
+          toast.error('Lỗi khi cập nhật trạng thái người dùng.');
+        }
       }
-    } catch (err) {
-      toast.error('Lỗi khi cập nhật trạng thái người dùng.');
-    }
+    });
   };
 
   const filteredUsers = users.filter(u => 
@@ -88,6 +105,15 @@ const AdminUsers = () => {
               className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-0 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all"
             />
           </div>
+          <select
+            value={userTypeFilter}
+            onChange={(e) => setUserTypeFilter(e.target.value)}
+            className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-0 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all text-sm font-bold"
+          >
+            <option value="">Tất cả tài khoản</option>
+            <option value="Sales">Tài khoản Mua hàng</option>
+            <option value="NFC">Tài khoản NFC</option>
+          </select>
           <button onClick={fetchUsers} className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
             <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
@@ -127,7 +153,12 @@ const AdminUsers = () => {
                           <Users className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="font-bold text-sm">{u.displayName}</p>
+                          <p className="font-bold text-sm">
+                            {u.displayName}
+                            <span className="ml-2 text-[10px] uppercase bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-300">
+                              {u.userType}
+                            </span>
+                          </p>
                           <p className="text-xs text-zinc-500 flex items-center gap-1">
                             <Mail className="w-3 h-3" /> {u.email}
                           </p>
@@ -203,6 +234,15 @@ const AdminUsers = () => {
           </table>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        type={confirmConfig.type}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

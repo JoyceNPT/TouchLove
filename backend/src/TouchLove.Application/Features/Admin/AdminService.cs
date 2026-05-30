@@ -54,9 +54,12 @@ public class AdminService
     }
 
     // ─── Users ─────────────────────────────────────────────────────────
-    public async Task<ApiResponse<PagedResult<AdminUserDto>>> GetUsersAsync(string? search, string? status, int page, int size, CancellationToken ct = default)
+    public async Task<ApiResponse<PagedResult<AdminUserDto>>> GetUsersAsync(string? search, string? status, string? userType, int page, int size, CancellationToken ct = default)
     {
-        var query = _userManager.Users.Where(u => u.UserType == UserType.Sales).AsQueryable();
+        var query = _userManager.Users.AsQueryable();
+        if (!string.IsNullOrEmpty(userType) && Enum.TryParse<UserType>(userType, true, out var ut))
+            query = query.Where(u => u.UserType == ut);
+
         if (!string.IsNullOrEmpty(search))
             query = query.Where(u => u.Email!.Contains(search) || u.DisplayName.Contains(search));
         if (status == "blocked") query = query.Where(u => !u.IsActive);
@@ -65,7 +68,7 @@ public class AdminService
         var total = await query.CountAsync(ct);
         var items = await query
             .Skip((page - 1) * size).Take(size)
-            .Select(u => new AdminUserDto(u.Id, u.DisplayName, u.Email!, u.IsActive, u.IsEmailVerified, u.CreatedAt, u.Gender, u.DateOfBirth, u.Bio))
+            .Select(u => new AdminUserDto(u.Id, u.DisplayName, u.Email!, u.IsActive, u.IsEmailVerified, u.CreatedAt, u.Gender, u.DateOfBirth, u.Bio, u.UserType.ToString()))
             .ToListAsync(ct);
 
         return ApiResponse<PagedResult<AdminUserDto>>.Ok(new PagedResult<AdminUserDto>
@@ -127,6 +130,33 @@ public class AdminService
         keychain.RevokedAt = null;
         await _db.SaveChangesAsync(ct);
         return ApiResponse<string>.Ok("Keychain reactivated.");
+    }
+
+    public async Task<ApiResponse<string>> UnpairCoupleAsync(string keyId, CancellationToken ct = default)
+    {
+        var keychain = await _db.Keychains.IgnoreQueryFilters().FirstOrDefaultAsync(k => k.KeyId == keyId, ct);
+        if (keychain == null) return ApiResponse<string>.Fail("Không tìm thấy móc khóa.");
+        if (keychain.CoupleId == null) return ApiResponse<string>.Fail("Móc khóa này chưa được ghép đôi.");
+
+        var coupleId = keychain.CoupleId;
+
+        // Find all keychains belonging to this couple
+        var keychains = await _db.Keychains.IgnoreQueryFilters().Where(k => k.CoupleId == coupleId).ToListAsync(ct);
+        foreach (var k in keychains)
+        {
+            k.CoupleId = null;
+            k.Status = KeychainStatus.Activated; // Return to single activated state
+        }
+
+        // Delete the couple (this will cascade delete memories and anniversaries depending on EF config, or just remove the entity)
+        var couple = await _db.Couples.FindAsync(new object[] { coupleId }, ct);
+        if (couple != null)
+        {
+            _db.Couples.Remove(couple);
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse<string>.Ok("Đã gỡ ghép đôi thành công.");
     }
     public async Task<ApiResponse<PagedResult<KeychainSummaryDto>>> GetKeychainsAsync(string? search, string? status, int page, int size, CancellationToken ct = default)
     {
@@ -220,7 +250,7 @@ public record AdminStatsDto(int TotalCouples, int ActiveCouples, int TotalUsers,
     TemplateStats TemplatesByStatus, List<DailyCount> NewCouplesLast7Days);
 public record TemplateStats(int Draft, int Published, int Archived);
 public record DailyCount(DateTime Date, int Count);
-public record AdminUserDto(Guid Id, string DisplayName, string Email, bool IsActive, bool IsEmailVerified, DateTime CreatedAt, string? Gender, DateOnly? DateOfBirth, string? Bio);
+public record AdminUserDto(Guid Id, string DisplayName, string Email, bool IsActive, bool IsEmailVerified, DateTime CreatedAt, string? Gender, DateOnly? DateOfBirth, string? Bio, string UserType);
 public record KeychainSummaryDto(
     Guid Id, string KeyId, KeychainStatus Status, DateTime CreatedAt, DateTime? ActivatedAt,
     Guid? CoupleId, string? CoupleName, string? CoupleSlug,

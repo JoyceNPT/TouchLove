@@ -124,7 +124,7 @@ public class AlbumService
         await _db.SaveChangesAsync(ct);
 
         var couple = await _db.Couples.FindAsync([coupleId], ct);
-        if (couple != null) await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+        if (couple != null) await _cache.RemoveAsync($"couple:{couple.Id}", ct);
 
         var user = await _db.Users.FindAsync([userId], ct);
         var uploaderName = user?.DisplayName ?? "Ẩn danh";
@@ -154,7 +154,7 @@ public class AlbumService
         memory.DeleteScheduledAt = DateTime.UtcNow.AddDays(Constants.Album.DeleteAfterDays);
         await _db.SaveChangesAsync(ct);
 
-        if (memory.Couple != null) await _cache.RemoveAsync($"couple:{memory.Couple.CoupleSlug}", ct);
+        if (memory.Couple != null) await _cache.RemoveAsync($"couple:{memory.Couple.Id}", ct);
         return ApiResponse<string>.Ok("Memory deleted. It will be permanently removed in 7 days.");
     }
 

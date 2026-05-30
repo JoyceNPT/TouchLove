@@ -28,9 +28,9 @@ public class AdminController : ControllerBase
 
     // ─── Users ─────────────────────────────────────────────────────────
     [HttpGet("users")]
-    public async Task<IActionResult> GetUsers([FromQuery] string? search, [FromQuery] string? status,
+    public async Task<IActionResult> GetUsers([FromQuery] string? search, [FromQuery] string? status, [FromQuery] string? userType,
         [FromQuery] int page = 1, [FromQuery] int size = 20, CancellationToken ct = default)
-        => Ok(await _adminService.GetUsersAsync(search, status, page, size, ct));
+        => Ok(await _adminService.GetUsersAsync(search, status, userType, page, size, ct));
 
     [HttpPost("users/{userId:guid}/block")]
     public async Task<IActionResult> BlockUser(Guid userId, CancellationToken ct) => Ok(await _adminService.BlockUserAsync(userId, ct));
@@ -53,6 +53,9 @@ public class AdminController : ControllerBase
 
     [HttpPost("keychains/{keyId}/reactivate")]
     public async Task<IActionResult> Reactivate(string keyId, CancellationToken ct) => Ok(await _adminService.ReactivateKeychainAsync(keyId, ct));
+
+    [HttpPost("keychains/{keyId}/unpair")]
+    public async Task<IActionResult> Unpair(string keyId, CancellationToken ct) => Ok(await _adminService.UnpairCoupleAsync(keyId, ct));
 
     // ─── Templates ─────────────────────────────────────────────────────
     [HttpGet("templates")]

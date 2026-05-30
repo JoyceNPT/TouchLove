@@ -85,11 +85,7 @@ const MainLayout = () => {
             {isAuthenticated ? (
               <div className="flex items-center gap-4">
                 <Link 
-                  to={
-                    user?.userType === 'NFC'
-                      ? (user.coupleId ? `/couple/${user.coupleId}` : '/nfc-profile')
-                      : '/profile'
-                  }
+                  to={user?.userType === 'NFC' ? '/nfc-profile' : '/profile'}
                   className="flex items-center gap-2 hover:text-primary transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">

@@ -32,10 +32,10 @@ import NfcSetupPin from './pages/NfcSetupPin';
 import NfcRedirect from './pages/NfcRedirect';
 import { ToastContainer } from './components/shared/ToastContainer';
 import { useAuthStore } from './store/authStore';
-import { useEffect } from 'react';
-import axios from 'axios';
+import { useEffect, useState } from 'react';
 import { axiosInstance } from './api/axiosInstance';
 import { useLocation } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 
 // Global guard to check if account is locked on every navigation
 const UserStatusGuard = () => {
@@ -77,26 +77,71 @@ const NfcRouteGuard = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-function App() {
-  const { user, isAuthenticated, setToken, setUser, clearAuth } = useAuthStore();
+/** Waits for ?token= from NFC redirect before sending user to /login */
+const ProtectedNfcProfile = () => {
+  const { isAuthenticated } = useAuthStore();
+  const hasUrlToken = () => new URLSearchParams(window.location.search).has('token');
+  const [authReady, setAuthReady] = useState(() => isAuthenticated || !hasUrlToken());
 
-  // 1. Sync check for URL token (login from email/NFC)
+  useEffect(() => {
+    if (authReady) return;
+
+    const unsub = useAuthStore.subscribe((state) => {
+      if (state.isAuthenticated && state.user) {
+        setAuthReady(true);
+      }
+    });
+
+    const timeout = window.setTimeout(() => setAuthReady(true), 8000);
+    return () => {
+      unsub();
+      window.clearTimeout(timeout);
+    };
+  }, [authReady]);
+
+  if (!authReady) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <RefreshCw className="w-12 h-12 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (
+    <NfcRouteGuard>
+      <NfcProfile />
+    </NfcRouteGuard>
+  );
+};
+
+function App() {
+  const { user, isAuthenticated, setAuth, clearAuth } = useAuthStore();
+
+  // Login from email/NFC redirect (?token=...)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
-    if (urlToken) {
-      setToken(urlToken);
-      const newUrl = window.location.pathname + window.location.hash;
-      window.history.replaceState({}, '', newUrl);
-      
-      axios.get('/api/users/me', { headers: { Authorization: `Bearer ${urlToken}` } })
-        .then(res => {
-          if (res.data.success) setUser(res.data.data);
-          else clearAuth();
-        })
-        .catch(() => clearAuth());
-    }
-  }, []);
+    if (!urlToken) return;
+
+    localStorage.setItem('accessToken', urlToken);
+    const newUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, '', newUrl);
+
+    axiosInstance
+      .get('/users/me', { headers: { Authorization: `Bearer ${urlToken}` } })
+      .then((res) => {
+        if (res.data.success && res.data.data) {
+          setAuth(res.data.data, urlToken);
+        } else {
+          clearAuth();
+        }
+      })
+      .catch(() => clearAuth());
+  }, [setAuth, clearAuth]);
 
   useEffect(() => {
     // Sync theme on mount
@@ -143,7 +188,7 @@ function App() {
           {/* Protected NFC Flows */}
           <Route element={<MainLayout />}>
             <Route path="/profile" element={isAuthenticated ? (user?.userType === 'Sales' ? <Profile /> : <Navigate to="/nfc-profile" />) : <Navigate to="/login" />} />
-            <Route path="/nfc-profile" element={isAuthenticated ? (<NfcRouteGuard><NfcProfile /></NfcRouteGuard>) : <Navigate to="/login" />} />
+            <Route path="/nfc-profile" element={<ProtectedNfcProfile />} />
             <Route path="/profile/security" element={isAuthenticated ? <SecuritySettings /> : <Navigate to="/login" />} />
             <Route 
               path="/activate/:keyId" 

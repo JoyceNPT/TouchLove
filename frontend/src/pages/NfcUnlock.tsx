@@ -8,7 +8,6 @@ import { useAuthStore } from '../store/authStore';
 const NfcUnlock = () => {
   const { keyId } = useParams();
   const navigate = useNavigate();
-  const setToken = useAuthStore(state => state.setToken); // Assuming authStore has setToken or similar method
 
   const [pin, setPin] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -48,19 +47,17 @@ const NfcUnlock = () => {
         const user = res.data.data.user;
         
         // Store in auth store
+        localStorage.setItem('accessToken', token);
         useAuthStore.setState({
-          token,
+          accessToken: token,
           user,
-          isAuthenticated: true
+          isAuthenticated: true,
         });
 
-        // Trigger cart count sync if needed
         setTimeout(() => {
-          const redirectTarget = res.data.data.user.role === 'Admin' 
-            ? '/admin' 
-            : res.data.data.coupleId 
-              ? `/couple/${res.data.data.coupleId}` 
-              : '/nfc-profile';
+          const redirectTarget = res.data.data.user.role === 'Admin'
+            ? '/admin'
+            : '/nfc-profile';
           navigate(redirectTarget);
         }, 1200);
       } else {

@@ -28,7 +28,6 @@ public class KeychainService
         if (keychain.Status != KeychainStatus.Available)
             return ApiResponse<string>.Fail("This keychain is not available for activation.");
 
-        // Check user doesn't already have an Activated keychain
         var existing = await _db.Keychains
             .IgnoreQueryFilters()
             .AnyAsync(k => k.UserId == userId && k.Status == KeychainStatus.Activated, ct);
@@ -54,14 +53,16 @@ public class KeychainService
         if (keychain == null)
             return ApiResponse<string>.Fail("You need an activated keychain to create an invitation.");
 
-        // Revoke any existing active invite for this keychain
         var existing = await _db.PairingInvitations
             .Where(i => i.InitiatorKeychainId == keychain.Id && !i.IsUsed && i.ExpiresAt > DateTime.UtcNow)
             .ToListAsync(ct);
-        foreach (var inv in existing)
-            inv.IsUsed = true; // effectively revoke
 
-        // Generate unique 6-char code (no 0,O,I,1)
+        if (existing.Any(i => i.IsPendingConfirmation))
+            return ApiResponse<string>.Fail("Bạn đang có yêu cầu ghép đôi chờ xác nhận. Hãy xác nhận hoặc từ chối trước khi tạo mã mới.");
+
+        foreach (var inv in existing)
+            inv.IsUsed = true;
+
         var code = await GenerateUniqueInviteCodeAsync(ct);
 
         _db.PairingInvitations.Add(new PairingInvitation
@@ -75,16 +76,21 @@ public class KeychainService
         return ApiResponse<string>.Ok(code, "Invitation code created. Share this with your partner.");
     }
 
-    // ─── Accept Pairing (Partner B) ──────────────────────────────────
-    public async Task<ApiResponse<CoupleDto>> AcceptPairingAsync(string inviteCode, Guid userId, IEmailService emailService, CancellationToken ct = default)
+    // ─── Request pairing (Partner B enters code — awaits A confirm) ───
+    public async Task<ApiResponse<PairingRequestDto>> RequestPairingAsync(string inviteCode, Guid userId, CancellationToken ct = default)
     {
+        inviteCode = inviteCode.Trim().ToUpperInvariant();
+
         var invitation = await _db.PairingInvitations
             .Include(i => i.InitiatorKeychain)
                 .ThenInclude(k => k!.User)
             .FirstOrDefaultAsync(i => i.InviteCode == inviteCode && !i.IsUsed && i.ExpiresAt > DateTime.UtcNow, ct);
 
         if (invitation == null)
-            return ApiResponse<CoupleDto>.Fail("Invalid, expired, or already used invitation code.");
+            return ApiResponse<PairingRequestDto>.Fail("Mã mời không hợp lệ, đã hết hạn hoặc đã được sử dụng.");
+
+        if (invitation.IsPendingConfirmation)
+            return ApiResponse<PairingRequestDto>.Fail("Mã mời này đang chờ xác nhận từ chủ mã. Vui lòng đợi hoặc liên hệ đối phương.");
 
         var partnerBKeychain = await _db.Keychains
             .IgnoreQueryFilters()
@@ -92,20 +98,166 @@ public class KeychainService
             .FirstOrDefaultAsync(k => k.UserId == userId && k.Status == KeychainStatus.Activated, ct);
 
         if (partnerBKeychain == null)
-            return ApiResponse<CoupleDto>.Fail("You need an activated keychain to accept a pairing.");
+            return ApiResponse<PairingRequestDto>.Fail("Bạn cần kích hoạt móc khóa NFC trước khi ghép đôi.");
 
-        // Self-pair check
         if (invitation.InitiatorKeychainId == partnerBKeychain.Id)
-            return ApiResponse<CoupleDto>.Fail("You cannot pair with yourself.");
+            return ApiResponse<PairingRequestDto>.Fail("Bạn không thể ghép đôi với chính mình.");
 
-        // User already in a couple?
         if (partnerBKeychain.CoupleId.HasValue)
-            return ApiResponse<CoupleDto>.Fail("Your keychain is already paired.");
+            return ApiResponse<PairingRequestDto>.Fail("Móc khóa của bạn đã được ghép đôi.");
 
-        var partnerA = invitation.InitiatorKeychain!.User!;
+        var existingPending = await _db.PairingInvitations
+            .AnyAsync(i => i.UsedByKeychainId == partnerBKeychain.Id && i.IsPendingConfirmation && !i.IsUsed && i.ExpiresAt > DateTime.UtcNow, ct);
+
+        if (existingPending)
+            return ApiResponse<PairingRequestDto>.Fail("Bạn đã gửi yêu cầu ghép đôi. Vui lòng chờ đối phương xác nhận.");
+
+        invitation.UsedByKeychainId = partnerBKeychain.Id;
+        invitation.IsPendingConfirmation = true;
+        invitation.RequestedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
+        var initiatorName = invitation.InitiatorKeychain?.User?.Nickname
+            ?? invitation.InitiatorKeychain?.User?.DisplayName
+            ?? "Đối phương";
+
+        var requesterName = partnerBKeychain.User?.Nickname ?? partnerBKeychain.User?.DisplayName ?? "Ai đó";
+        var initiatorUserId = invitation.InitiatorKeychain?.UserId
+            ?? (await _db.Keychains.IgnoreQueryFilters().FirstAsync(k => k.Id == invitation.InitiatorKeychainId, ct)).UserId;
+
+        return ApiResponse<PairingRequestDto>.Ok(
+            new PairingRequestDto(
+                invitation.Id,
+                "pending_confirmation",
+                initiatorName,
+                null,
+                null,
+                requesterName,
+                initiatorUserId),
+            "Đã gửi yêu cầu ghép đôi. Chờ đối phương (chủ mã mời) xác nhận! 💕");
+    }
+
+    // ─── Confirm pairing (Partner A — initiator) ─────────────────────
+    public async Task<ApiResponse<CoupleDto>> ConfirmPairingAsync(Guid userId, IEmailService emailService, CancellationToken ct = default)
+    {
+        var initiatorKeychain = await _db.Keychains
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(k => k.UserId == userId && k.Status == KeychainStatus.Activated, ct);
+
+        if (initiatorKeychain == null)
+            return ApiResponse<CoupleDto>.Fail("Không tìm thấy móc khóa đang chờ ghép đôi.");
+
+        var invitation = await _db.PairingInvitations
+            .Include(i => i.InitiatorKeychain)
+                .ThenInclude(k => k!.User)
+            .Include(i => i.UsedByKeychain)
+                .ThenInclude(k => k!.User)
+            .FirstOrDefaultAsync(i =>
+                i.InitiatorKeychainId == initiatorKeychain.Id
+                && i.IsPendingConfirmation
+                && !i.IsUsed
+                && i.ExpiresAt > DateTime.UtcNow, ct);
+
+        if (invitation == null)
+            return ApiResponse<CoupleDto>.Fail("Không có yêu cầu ghép đôi nào cần xác nhận.");
+
+        return await CompletePairingAsync(invitation, emailService, ct);
+    }
+
+    // ─── Reject / cancel pending pairing ─────────────────────────────
+    public async Task<ApiResponse<string>> RejectPairingAsync(Guid userId, CancellationToken ct = default)
+    {
+        var keychain = await _db.Keychains
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(k => k.UserId == userId && k.Status == KeychainStatus.Activated, ct);
+
+        if (keychain == null)
+            return ApiResponse<string>.Fail("Không tìm thấy móc khóa NFC.");
+
+        var invitation = await _db.PairingInvitations
+            .FirstOrDefaultAsync(i =>
+                !i.IsUsed
+                && i.IsPendingConfirmation
+                && i.ExpiresAt > DateTime.UtcNow
+                && (i.InitiatorKeychainId == keychain.Id || i.UsedByKeychainId == keychain.Id), ct);
+
+        if (invitation == null)
+            return ApiResponse<string>.Fail("Không có yêu cầu ghép đôi nào để hủy.");
+
+        invitation.IsPendingConfirmation = false;
+        invitation.UsedByKeychainId = null;
+        invitation.RequestedAt = null;
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse<string>.Ok("Đã hủy yêu cầu ghép đôi.");
+    }
+
+    public async Task<PairingPendingInfo?> GetPairingPendingForUserAsync(Guid userId, CancellationToken ct = default)
+    {
+        var keychain = await _db.Keychains
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(k => k.UserId == userId && k.Status == KeychainStatus.Activated, ct);
+
+        if (keychain == null) return null;
+
+        var asAcceptor = await _db.PairingInvitations
+            .Include(i => i.InitiatorKeychain)
+                .ThenInclude(k => k!.User)
+            .FirstOrDefaultAsync(i =>
+                i.UsedByKeychainId == keychain.Id
+                && i.IsPendingConfirmation
+                && !i.IsUsed
+                && i.ExpiresAt > DateTime.UtcNow, ct);
+
+        if (asAcceptor != null)
+        {
+            var name = asAcceptor.InitiatorKeychain?.User?.Nickname
+                ?? asAcceptor.InitiatorKeychain?.User?.DisplayName
+                ?? "Đối phương";
+            return new PairingPendingInfo(asAcceptor.Id, "acceptor", name, asAcceptor.RequestedAt);
+        }
+
+        var asInitiator = await _db.PairingInvitations
+            .Include(i => i.UsedByKeychain)
+                .ThenInclude(k => k!.User)
+            .FirstOrDefaultAsync(i =>
+                i.InitiatorKeychainId == keychain.Id
+                && i.IsPendingConfirmation
+                && !i.IsUsed
+                && i.ExpiresAt > DateTime.UtcNow, ct);
+
+        if (asInitiator != null)
+        {
+            var name = asInitiator.UsedByKeychain?.User?.Nickname
+                ?? asInitiator.UsedByKeychain?.User?.DisplayName
+                ?? "Đối phương";
+            return new PairingPendingInfo(asInitiator.Id, "initiator", name, asInitiator.RequestedAt);
+        }
+
+        return null;
+    }
+
+    private async Task<ApiResponse<CoupleDto>> CompletePairingAsync(
+        PairingInvitation invitation,
+        IEmailService emailService,
+        CancellationToken ct)
+    {
+        if (!invitation.IsPendingConfirmation || invitation.UsedByKeychainId == null)
+            return ApiResponse<CoupleDto>.Fail("Yêu cầu ghép đôi không hợp lệ.");
+
+        var partnerAKeychain = invitation.InitiatorKeychain
+            ?? await _db.Keychains.IgnoreQueryFilters().Include(k => k.User).FirstAsync(k => k.Id == invitation.InitiatorKeychainId, ct);
+
+        var partnerBKeychain = invitation.UsedByKeychain
+            ?? await _db.Keychains.IgnoreQueryFilters().Include(k => k.User).FirstAsync(k => k.Id == invitation.UsedByKeychainId.Value, ct);
+
+        if (partnerAKeychain.Status != KeychainStatus.Activated || partnerBKeychain.Status != KeychainStatus.Activated)
+            return ApiResponse<CoupleDto>.Fail("Một trong hai móc khóa không còn ở trạng thái có thể ghép đôi.");
+
+        var partnerA = partnerAKeychain.User!;
         var partnerB = partnerBKeychain.User!;
 
-        // Generate unique slug
         var slug = await GenerateUniqueSlugAsync(partnerA.DisplayName, partnerB.DisplayName, ct);
 
         var couple = new TouchLove.Domain.Entities.Couple
@@ -120,23 +272,43 @@ public class KeychainService
         };
         _db.Couples.Add(couple);
 
-        // Update keychains
-        invitation.InitiatorKeychain.Status = KeychainStatus.Paired;
-        invitation.InitiatorKeychain.CoupleId = couple.Id;
+        partnerAKeychain.Status = KeychainStatus.Paired;
+        partnerAKeychain.CoupleId = couple.Id;
         partnerBKeychain.Status = KeychainStatus.Paired;
         partnerBKeychain.CoupleId = couple.Id;
 
-        // Mark invitation used
         invitation.IsUsed = true;
-        invitation.UsedByKeychainId = partnerBKeychain.Id;
+        invitation.IsPendingConfirmation = false;
 
         await _db.SaveChangesAsync(ct);
 
-        // Send emails
         await emailService.SendPairingSuccessAsync(partnerA.Email!, partnerB.DisplayName, couple.Id, ct);
         await emailService.SendPairingSuccessAsync(partnerB.Email!, partnerA.DisplayName, couple.Id, ct);
 
-        return ApiResponse<CoupleDto>.Ok(new CoupleDto(couple.Id, couple.CoupleSlug, couple.CoupleName), "Pairing successful! 💕");
+        return ApiResponse<CoupleDto>.Ok(new CoupleDto(couple.Id, couple.CoupleSlug, couple.CoupleName), "Ghép đôi thành công! 💕");
+    }
+
+    public async Task<Guid?> GetAcceptorUserIdForPendingInvitationAsync(Guid initiatorUserId, CancellationToken ct = default)
+    {
+        var keychain = await _db.Keychains
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(k => k.UserId == initiatorUserId && k.Status == KeychainStatus.Activated, ct);
+        if (keychain == null) return null;
+
+        var invitation = await _db.PairingInvitations
+            .FirstOrDefaultAsync(i =>
+                i.InitiatorKeychainId == keychain.Id
+                && i.IsPendingConfirmation
+                && !i.IsUsed
+                && i.ExpiresAt > DateTime.UtcNow, ct);
+
+        if (invitation?.UsedByKeychainId == null) return null;
+
+        var acceptorKeychain = await _db.Keychains
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(k => k.Id == invitation.UsedByKeychainId, ct);
+
+        return acceptorKeychain?.UserId;
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────
@@ -181,7 +353,6 @@ public class KeychainService
     private static string Slugify(string input)
     {
         if (string.IsNullOrEmpty(input)) return "user";
-        // Basic Vietnamese-aware slugify: lowercase, replace spaces
         return input.ToLower()
             .Replace("đ", "d")
             .Replace(" ", "-")
@@ -202,3 +373,14 @@ public class KeychainService
 }
 
 public record CoupleDto(Guid Id, string Slug, string? Name);
+
+public record PairingRequestDto(
+    Guid InvitationId,
+    string Status,
+    string PartnerName,
+    Guid? CoupleId,
+    string? CoupleSlug,
+    string? RequesterDisplayName = null,
+    Guid? InitiatorUserId = null);
+
+public record PairingPendingInfo(Guid InvitationId, string Role, string PartnerName, DateTime? RequestedAt);

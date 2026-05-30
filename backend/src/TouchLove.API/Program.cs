@@ -24,7 +24,7 @@ using TouchLove.Infrastructure.Persistence;
 using TouchLove.Infrastructure.Persistence.Seeding;
 using TouchLove.Infrastructure.Services;
 using TouchLove.Infrastructure.Storage;
-using TouchLove.API.Hubs;
+
 
 
 // ── Serilog bootstrap ─────────────────────────────────────────────────
@@ -81,6 +81,17 @@ try
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero
+        };
+        opt.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            }
         };
     });
 

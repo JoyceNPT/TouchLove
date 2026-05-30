@@ -8,6 +8,9 @@ public class PairingInvitation
     public DateTime ExpiresAt { get; set; }
     public bool IsUsed { get; set; } = false;
     public Guid? UsedByKeychainId { get; set; }
+    /// <summary>Partner B submitted the code; waiting for initiator (A) to confirm.</summary>
+    public bool IsPendingConfirmation { get; set; } = false;
+    public DateTime? RequestedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

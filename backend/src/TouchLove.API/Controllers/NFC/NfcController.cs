@@ -78,8 +78,7 @@ public class NfcController : ControllerBase
 
         await _db.SaveChangesAsync(ct);
 
-        var redirectTarget = keychain.CoupleId == null ? "/nfc-profile" : $"/couple/{keychain.CoupleId}";
-        
-        return Redirect($"{frontendUrl}{redirectTarget}?token={accessToken}");
+        // Always land on personal NFC profile first; user navigates to couple space from there.
+        return Redirect($"{frontendUrl}/nfc-profile?token={accessToken}");
     }
 }

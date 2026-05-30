@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import * as signalR from '@microsoft/signalr';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
@@ -21,7 +22,10 @@ import {
   CalendarHeart,
   Repeat,
   X,
-  Edit2
+  Edit2,
+  ArrowRight,
+  Clock,
+  AlertCircle,
 } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import { useAuthStore } from '../store/authStore';
@@ -42,6 +46,9 @@ interface NfcProfileData {
   isPaired: boolean;
   coupleId?: string;
   inviteCode?: string;
+  pairingPendingRole?: 'initiator' | 'acceptor';
+  pairingPendingPartnerName?: string;
+  pairingPendingInvitationId?: string;
 }
 
 interface AnniversaryReminder {
@@ -54,14 +61,17 @@ interface AnniversaryReminder {
 type ProfileTab = 'profile' | 'reminders';
 
 const NfcProfile = () => {
-  const navigate = useNavigate();
   const { user, updateUser } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const connectionRef = useRef<signalR.HubConnection | null>(null);
+  const [pairingNotification, setPairingNotification] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<NfcProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [partnerInviteCode, setPartnerInviteCode] = useState('');
   const [isPairing, setIsPairing] = useState(false);
+  const [isConfirmingPairing, setIsConfirmingPairing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -110,10 +120,7 @@ const NfcProfile = () => {
         setIsProfilePublic(data.isProfilePublic);
 
         if (data.isPaired && data.coupleId) {
-          // Save coupleId to auth store so navbar can link directly
           updateUser({ coupleId: data.coupleId });
-          navigate(`/couple/${data.coupleId}`, { replace: true });
-          return;
         }
       } else {
         setError(res.data.message || 'Không thể tải thông tin profile.');
@@ -142,6 +149,11 @@ const NfcProfile = () => {
 
   useEffect(() => {
     fetchProfile();
+    const inviteFromUrl = searchParams.get('invite');
+    if (inviteFromUrl) {
+      setPartnerInviteCode(inviteFromUrl.toUpperCase().slice(0, 6));
+      setSearchParams({}, { replace: true });
+    }
   }, []);
 
   useEffect(() => {
@@ -149,6 +161,41 @@ const NfcProfile = () => {
       fetchReminders();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${backendUrl}/hubs/couple`, {
+        accessTokenFactory: () => localStorage.getItem('accessToken') || '',
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    connection
+      .start()
+      .then(() => {
+        connection.on('ReceivePairingRequest', (requesterName: string) => {
+          setPairingNotification(`${requesterName} muốn ghép đôi với bạn! Hãy xác nhận bên dưới.`);
+          fetchProfile();
+          setTimeout(() => setPairingNotification(null), 8000);
+        });
+        connection.on('ReceivePairingConfirmed', (coupleId: string) => {
+          setPairingNotification('Ghép đôi thành công! 💕');
+          updateUser({ coupleId });
+          fetchProfile();
+          setTimeout(() => setPairingNotification(null), 8000);
+        });
+      })
+      .catch((err) => console.error('SignalR pairing notifications:', err));
+
+    connectionRef.current = connection;
+    return () => {
+      connection.stop();
+      connectionRef.current = null;
+    };
+  }, [user?.id]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,10 +281,12 @@ const NfcProfile = () => {
     setError(null);
     try {
       const res = await axiosInstance.post('/pairing/accept', { inviteCode: partnerInviteCode.toUpperCase().trim() });
-      if (res.data.success && res.data.data) {
-        const coupleId = res.data.data.id;
-        toast.success('Ghép đôi móc khóa thành công! Chào mừng đến với không gian cặp đôi của hai bạn 💕');
-        navigate(`/couple/${coupleId}`);
+      if (res.data.success && res.data.data?.status === 'pending_confirmation') {
+        toast.success(res.data.message || 'Đã gửi yêu cầu ghép đôi. Chờ đối phương xác nhận! 💕');
+        setPartnerInviteCode('');
+        await fetchProfile();
+      } else if (res.data.success) {
+        toast.error('Phản hồi không hợp lệ từ máy chủ. Vui lòng thử lại.');
       } else {
         setError(res.data.message || 'Mã ghép đôi không hợp lệ hoặc đã hết hạn.');
       }
@@ -245,6 +294,43 @@ const NfcProfile = () => {
       setError(err.response?.data?.message || 'Có lỗi xảy ra khi ghép đôi.');
     } finally {
       setIsPairing(false);
+    }
+  };
+
+  const handleConfirmPairing = async () => {
+    setIsConfirmingPairing(true);
+    setError(null);
+    try {
+      const res = await axiosInstance.post('/pairing/confirm');
+      if (res.data.success && res.data.data) {
+        updateUser({ coupleId: res.data.data.id });
+        toast.success('Ghép đôi thành công! Bạn có thể vào không gian couple 💕');
+        await fetchProfile();
+      } else {
+        setError(res.data.message || 'Không thể xác nhận ghép đôi.');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Có lỗi khi xác nhận ghép đôi.');
+    } finally {
+      setIsConfirmingPairing(false);
+    }
+  };
+
+  const handleRejectPairing = async () => {
+    setIsConfirmingPairing(true);
+    setError(null);
+    try {
+      const res = await axiosInstance.post('/pairing/reject');
+      if (res.data.success) {
+        toast.success('Đã hủy yêu cầu ghép đôi.');
+        await fetchProfile();
+      } else {
+        setError(res.data.message || 'Không thể hủy yêu cầu.');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Có lỗi khi hủy yêu cầu ghép đôi.');
+    } finally {
+      setIsConfirmingPairing(false);
     }
   };
 
@@ -342,6 +428,13 @@ const NfcProfile = () => {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-5xl">
+      {pairingNotification && (
+        <div className="mb-6 p-4 bg-primary/10 border border-primary/30 rounded-2xl flex items-center gap-3 text-sm font-bold text-primary">
+          <Bell className="w-5 h-5 shrink-0 animate-bounce" />
+          {pairingNotification}
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="relative text-center mb-10 p-8 rounded-[3rem] bg-gradient-to-tr from-primary/10 to-pink-500/10 border border-white/20 dark:border-zinc-800/30 overflow-hidden backdrop-blur-md">
         <div className="absolute top-0 right-0 w-36 h-36 bg-primary/20 rounded-full blur-2xl -z-10" />
@@ -350,8 +443,18 @@ const NfcProfile = () => {
           Hồ Sơ NFC Cá Nhân 🏷️
         </h1>
         <p className="text-muted-foreground max-w-xl mx-auto text-sm">
-          Thiết lập thông tin cá nhân của chip NFC đơn độc. Chia sẻ mã mời hoặc nhập mã của đối phương để kết đôi lãng mạn.
+          Thiết lập thông tin cá nhân của chip NFC. Ghép đôi cần hai bên: một người nhập mã, người kia xác nhận.
         </p>
+        {profile?.isPaired && profile.coupleId && (
+          <Link
+            to={`/couple/${profile.coupleId}`}
+            className="inline-flex items-center justify-center gap-2 mt-6 px-8 py-3.5 bg-primary hover:bg-primary/95 text-white font-black rounded-2xl shadow-lg shadow-primary/25 transition-all hover:scale-[1.02]"
+          >
+            <Heart className="w-5 h-5 fill-white/30" />
+            Vào không gian couple
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+        )}
       </div>
 
       {/* Tab Navigation */}
@@ -388,7 +491,78 @@ const NfcProfile = () => {
             <div className="grid lg:grid-cols-3 gap-8 items-start">
               {/* Left: Pairing actions */}
               <div className="lg:col-span-1 space-y-6">
+                {profile?.isPaired && profile.coupleId && (
+                  <div className="glass p-8 rounded-[2.5rem] border border-primary/20 shadow-xl text-center space-y-4">
+                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+                      <Heart className="w-8 h-8 text-primary fill-primary/20" />
+                    </div>
+                    <h3 className="text-xl font-black">Đã ghép đôi</h3>
+                    <p className="text-xs text-zinc-500">Bạn không thể ghép đôi thêm. Chỉ có thể vào không gian couple.</p>
+                    <Link
+                      to={`/couple/${profile.coupleId}`}
+                      className="inline-flex w-full items-center justify-center gap-2 py-3.5 bg-primary text-white font-black rounded-2xl text-sm"
+                    >
+                      Vào không gian couple <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                )}
+
+                {!profile?.isPaired && (
+                <>
+                {/* Pending: initiator must confirm */}
+                {profile?.pairingPendingRole === 'initiator' && (
+                  <div className="glass p-8 rounded-[2.5rem] border border-yellow-500/30 shadow-xl space-y-5 text-center">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-600 text-xs font-black">
+                      <AlertCircle className="w-3.5 h-3.5" /> Yêu cầu ghép đôi
+                    </span>
+                    <h3 className="text-lg font-black">Xác nhận ghép cặp</h3>
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                      <span className="font-bold text-primary">{profile.pairingPendingPartnerName}</span> đã nhập mã mời của bạn. Bạn có đồng ý ghép đôi không?
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={handleConfirmPairing}
+                        disabled={isConfirmingPairing}
+                        className="w-full bg-primary text-white py-3 rounded-2xl font-bold text-sm shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <Check className="w-4 h-4" /> Đồng ý ghép đôi
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRejectPairing}
+                        disabled={isConfirmingPairing}
+                        className="w-full border border-zinc-200 dark:border-zinc-700 py-3 rounded-2xl font-bold text-sm text-zinc-600 dark:text-zinc-300"
+                      >
+                        Từ chối
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending: acceptor waiting */}
+                {profile?.pairingPendingRole === 'acceptor' && (
+                  <div className="glass p-8 rounded-[2.5rem] border border-yellow-500/20 shadow-xl text-center space-y-4">
+                    <div className="p-3 bg-yellow-500/10 text-yellow-600 rounded-2xl inline-flex">
+                      <Clock className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <h3 className="text-lg font-black text-yellow-600">Đang chờ xác nhận</h3>
+                    <p className="text-xs text-zinc-500">
+                      Đã gửi yêu cầu ghép đôi tới <span className="font-bold">{profile.pairingPendingPartnerName}</span>. Họ cần xác nhận trên hồ sơ NFC.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleRejectPairing}
+                      disabled={isConfirmingPairing}
+                      className="text-xs font-bold text-zinc-400 hover:text-red-500 underline"
+                    >
+                      Hủy yêu cầu
+                    </button>
+                  </div>
+                )}
+
                 {/* Invite Code card */}
+                {!profile?.isPaired && profile?.pairingPendingRole !== 'acceptor' && (
                 <div className="glass p-8 rounded-[2.5rem] border border-white/20 dark:border-zinc-800/40 relative overflow-hidden text-center shadow-xl">
                   <div className="absolute top-4 right-4 text-xs font-bold px-2 py-0.5 bg-primary/10 text-primary rounded-full uppercase">Single NFC</div>
                   <div className="w-16 h-16 bg-gradient-to-tr from-primary to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/25">
@@ -416,14 +590,16 @@ const NfcProfile = () => {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Pairing input card */}
+                {!profile?.isPaired && !profile?.pairingPendingRole && (
                 <div className="glass p-8 rounded-[2.5rem] border border-white/20 dark:border-zinc-800/40 relative overflow-hidden shadow-xl">
                   <div className="w-16 h-16 bg-pink-500/10 text-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Heart className="w-7 h-7 fill-pink-500/10 text-pink-500 animate-pulse" />
                   </div>
                   <h3 className="text-xl font-black text-center mb-1">Nhập Mã Đối Phương</h3>
-                  <p className="text-zinc-500 text-xs text-center mb-6">Nhập mã 6 ký tự từ móc khóa của nửa kia để ghép đôi.</p>
+                  <p className="text-zinc-500 text-xs text-center mb-6">Nhập mã 6 ký tự từ đối phương. Họ sẽ cần xác nhận trước khi ghép đôi thành công.</p>
 
                   <form onSubmit={handlePairing} className="space-y-4">
                     <input 
@@ -440,10 +616,13 @@ const NfcProfile = () => {
                       className="w-full bg-gradient-to-r from-primary to-pink-500 text-white py-4 rounded-2xl font-black text-sm shadow-md shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
                     >
                       {isPairing ? <RefreshCw className="w-4 h-4 animate-spin inline mr-1" /> : null}
-                      Ghép đôi ngay 💕
+                      Gửi yêu cầu ghép đôi 💕
                     </button>
                   </form>
                 </div>
+                )}
+                </>
+                )}
               </div>
 
               {/* Right: Profile form */}

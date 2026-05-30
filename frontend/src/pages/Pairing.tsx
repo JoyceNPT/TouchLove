@@ -6,7 +6,8 @@ import axios from 'axios';
 
 const Pairing = () => {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'selection' | 'invite' | 'accept'>('selection');
+  const [mode, setMode] = useState<'selection' | 'invite' | 'accept' | 'pending'>('selection');
+  const [pendingPartnerName, setPendingPartnerName] = useState('');
   const [loading, setLoading] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
@@ -38,8 +39,8 @@ const Pairing = () => {
     try {
       const response = await axios.post('/api/pairing/accept', { inviteCode });
       if (response.data.success) {
-        // Success! Redirect to the new couple page
-        navigate(`/couple/${response.data.data.slug}`);
+        setPendingPartnerName(response.data.data?.partnerName || 'đối phương');
+        setMode('pending');
       } else {
         setError(response.data.message);
       }
@@ -133,7 +134,7 @@ const Pairing = () => {
               {copied && <p className="mt-2 text-xs text-green-500 font-medium">Đã sao chép vào bộ nhớ tạm!</p>}
 
               <p className="mt-8 text-sm text-muted-foreground italic">
-                * Mã này có hiệu lực trong 24 giờ.
+                * Chia sẻ mã cho đối phương. Khi họ nhập mã, bạn cần xác nhận trên hồ sơ NFC để hoàn tất ghép đôi.
               </p>
 
               <button
@@ -141,6 +142,28 @@ const Pairing = () => {
                 className="mt-8 w-full py-4 rounded-2xl border border-white/10 hover:bg-white/5 transition-all text-sm font-medium"
               >
                 Quay về Trang chủ
+              </button>
+            </motion.div>
+          )}
+
+          {mode === 'pending' && (
+            <motion.div
+              key="pending"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center"
+            >
+              <Heart className="w-16 h-16 text-yellow-500 mx-auto mb-6 fill-yellow-500/10" />
+              <h1 className="text-2xl font-bold mb-2">Đang chờ xác nhận</h1>
+              <p className="text-muted-foreground mb-8">
+                Đã gửi yêu cầu ghép đôi tới <span className="font-bold text-primary">{pendingPartnerName}</span>.
+                Chủ mã mời cần xác nhận trên hồ sơ NFC trước khi hai bạn được ghép cặp.
+              </p>
+              <button
+                onClick={() => navigate('/nfc-profile')}
+                className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl"
+              >
+                Về hồ sơ cá nhân
               </button>
             </motion.div>
           )}
@@ -173,7 +196,7 @@ const Pairing = () => {
                   disabled={loading || inviteCode.length < 6}
                   className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Bắt đầu hành trình 💕'}
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Gửi yêu cầu ghép đôi 💕'}
                 </button>
 
                 <button

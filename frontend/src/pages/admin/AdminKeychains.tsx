@@ -9,10 +9,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Trash2,
+  Unlink
 } from 'lucide-react';
 import axiosInstance from '../../api/axiosInstance';
 import { toast } from '../../store/useToastStore';
+import ConfirmModal from '../../components/shared/ConfirmModal';
 
 interface Keychain {
   id: string;
@@ -38,6 +41,13 @@ const AdminKeychains = () => {
   const [count, setCount] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedKeychainId, setExpandedKeychainId] = useState<string | null>(null);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning' as 'danger' | 'warning' | 'info',
+    onConfirm: () => {}
+  });
 
   const fetchKeychains = async () => {
     setIsLoading(true);
@@ -54,6 +64,46 @@ const AdminKeychains = () => {
   useEffect(() => {
     fetchKeychains();
   }, []);
+
+  const handleReactivate = async (keyId: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Mở khóa thiết bị',
+      message: 'Bạn có chắc muốn mở khóa thiết bị này?',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          const res = await axiosInstance.post(`/admin/keychains/${keyId}/reactivate`);
+          if (res.data.success) {
+            toast.success('Đã mở khóa thiết bị thành công!');
+            fetchKeychains();
+          }
+        } catch (err) {
+          toast.error('Lỗi khi mở khóa thiết bị.');
+        }
+      }
+    });
+  };
+
+  const handleUnpair = async (keyId: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Gỡ ghép đôi thiết bị',
+      message: 'Bạn có chắc muốn gỡ ghép đôi thiết bị này? Không gian cặp đôi sẽ bị xóa (nếu không còn dữ liệu)!',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await axiosInstance.post(`/admin/keychains/${keyId}/unpair`);
+          if (res.data.success) {
+            toast.success('Đã gỡ ghép đôi thành công!');
+            fetchKeychains();
+          }
+        } catch (err: any) {
+          toast.error(err.response?.data?.message || 'Lỗi khi gỡ ghép đôi.');
+        }
+      }
+    });
+  };
 
   const handleBulkCreate = async () => {
     setIsGenerating(true);
@@ -244,7 +294,7 @@ const AdminKeychains = () => {
                                      <span className="font-mono font-bold text-zinc-850 dark:text-zinc-250 block truncate">{k.coupleId}</span>
                                   </div>
                                 </div>
-                                <div className="pt-2">
+                                <div className="pt-2 flex items-center gap-2">
                                   <a 
                                     href={`/couple/${k.coupleId}`} 
                                     target="_blank" 
@@ -253,6 +303,12 @@ const AdminKeychains = () => {
                                   >
                                     Ghé thăm không gian công khai <ExternalLink className="w-3.5 h-3.5" />
                                   </a>
+                                  <button
+                                    onClick={() => handleUnpair(k.keyId)}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 rounded-xl text-xs font-black hover:bg-red-100 transition-colors"
+                                  >
+                                    <Unlink className="w-3.5 h-3.5" /> Gỡ ghép đôi
+                                  </button>
                                 </div>
                               </div>
                             ) : (
@@ -269,6 +325,15 @@ const AdminKeychains = () => {
           </table>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        type={confirmConfig.type}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

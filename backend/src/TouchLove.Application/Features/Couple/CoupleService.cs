@@ -121,7 +121,7 @@ public class CoupleService
         }
 
         await _db.SaveChangesAsync(ct);
-        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+        await _cache.RemoveAsync($"couple:{couple.Id}", ct);
         return ApiResponse<string>.Ok("Couple updated successfully.");
     }
 
@@ -142,7 +142,7 @@ public class CoupleService
             couple.AvatarBUrl = result.PublicUrl;
 
         await _db.SaveChangesAsync(ct);
-        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+        await _cache.RemoveAsync($"couple:{couple.Id}", ct);
         return ApiResponse<string>.Ok(result.PublicUrl);
     }
 
@@ -207,7 +207,7 @@ public class CoupleService
         if (keychainB != null) { keychainB.Status = KeychainStatus.Activated; keychainB.CoupleId = null; }
 
         await _db.SaveChangesAsync(ct);
-        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+        await _cache.RemoveAsync($"couple:{couple.Id}", ct);
 
         return ApiResponse<string>.Ok("Unpaired successfully. You can pair again with a new keychain.");
     }
@@ -251,7 +251,7 @@ public class CoupleService
         });
 
         await _db.SaveChangesAsync();
-        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}");
+        await _cache.RemoveAsync($"couple:{couple.Id}");
 
         return new NfcRedirectResult(NfcRedirectType.CouplePage, couple.Id.ToString());
     }
@@ -278,7 +278,7 @@ public class CoupleService
         couple.IsStartDateConfirmed = false;
 
         await _db.SaveChangesAsync(ct);
-        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+        await _cache.RemoveAsync($"couple:{couple.Id}", ct);
 
         return ApiResponse<string>.Ok("Đề xuất ngày yêu thành công. Chờ đối phương xác nhận! 💕");
     }
@@ -300,7 +300,7 @@ public class CoupleService
         couple.ProposedByUserId = null;
 
         await _db.SaveChangesAsync(ct);
-        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+        await _cache.RemoveAsync($"couple:{couple.Id}", ct);
 
         return ApiResponse<string>.Ok("Xác nhận ngày yêu thành công! Bộ đếm đã chính thức kích hoạt. 💕");
     }
@@ -321,7 +321,7 @@ public class CoupleService
         couple.IsStartDateConfirmed = false;
 
         await _db.SaveChangesAsync(ct);
-        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+        await _cache.RemoveAsync($"couple:{couple.Id}", ct);
 
         return ApiResponse<string>.Ok("Đã từ chối ngày yêu đề xuất.");
     }
@@ -346,7 +346,7 @@ public class CoupleService
         couple.IsAchievementsPublic = req.IsAchievementsPublic;
 
         await _db.SaveChangesAsync(ct);
-        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+        await _cache.RemoveAsync($"couple:{couple.Id}", ct);
 
         return ApiResponse<string>.Ok("Cập nhật thiết lập quyền riêng tư thành công!");
     }
