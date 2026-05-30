@@ -9,30 +9,45 @@ namespace TouchLove.Application.Features.Store;
 public class StoreService
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICacheService _cache;
 
-    public StoreService(IApplicationDbContext db)
+    public StoreService(IApplicationDbContext db, ICacheService cache)
     {
         _db = db;
+        _cache = cache;
     }
 
     public async Task<ApiResponse<List<ProductDto>>> GetProductsAsync(CancellationToken ct = default)
     {
+        var cacheKey = "store:products";
+        var cached = await _cache.GetAsync<List<ProductDto>>(cacheKey, ct);
+        if (cached != null) return ApiResponse<List<ProductDto>>.Ok(cached);
+
         var products = await _db.Products
             .Where(p => p.IsActive)
             .Select(p => new ProductDto(p.Id, p.Name, p.Slug, p.Description, p.Price, p.StockQuantity, p.ImageUrls))
             .ToListAsync(ct);
+            
+        await _cache.SetAsync(cacheKey, products, TimeSpan.FromMinutes(10), ct);
             
         return ApiResponse<List<ProductDto>>.Ok(products);
     }
 
     public async Task<ApiResponse<ProductDto>> GetProductBySlugAsync(string slug, CancellationToken ct = default)
     {
+        var cacheKey = $"store:product:{slug}";
+        var cached = await _cache.GetAsync<ProductDto>(cacheKey, ct);
+        if (cached != null) return ApiResponse<ProductDto>.Ok(cached);
+
         var p = await _db.Products
             .FirstOrDefaultAsync(p => p.Slug == slug && p.IsActive, ct);
             
         if (p == null) return ApiResponse<ProductDto>.Fail("Sản phẩm không tồn tại.");
         
-        return ApiResponse<ProductDto>.Ok(new ProductDto(p.Id, p.Name, p.Slug, p.Description, p.Price, p.StockQuantity, p.ImageUrls));
+        var dto = new ProductDto(p.Id, p.Name, p.Slug, p.Description, p.Price, p.StockQuantity, p.ImageUrls);
+        await _cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(10), ct);
+        
+        return ApiResponse<ProductDto>.Ok(dto);
     }
 
     public async Task<ApiResponse<List<OrderDto>>> GetMyOrdersAsync(Guid userId, CancellationToken ct = default)
@@ -68,10 +83,15 @@ public class StoreService
         foreach (var item in items)
         {
             var product = await _db.Products.FindAsync(new object[] { item.ProductId }, ct);
-            if (product != null) product.StockQuantity += item.Quantity;
+            if (product != null)
+            {
+                product.StockQuantity += item.Quantity;
+                await _cache.RemoveAsync($"store:product:{product.Slug}", ct);
+            }
         }
 
         await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync("store:products", ct);
         return ApiResponse<string>.Ok("Hủy đơn hàng thành công.");
     }
 
@@ -98,6 +118,7 @@ public class StoreService
 
             // Subtract stock
             product.StockQuantity -= item.Quantity;
+            await _cache.RemoveAsync($"store:product:{product.Slug}", ct);
             
             var orderItem = new OrderItem
             {
@@ -125,6 +146,7 @@ public class StoreService
 
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync("store:products", ct);
 
         return ApiResponse<OrderDto>.Ok(new OrderDto(order.Id, order.OrderNumber, order.TotalAmount, order.Status, order.PaymentStatus, order.CreatedAt));
     }

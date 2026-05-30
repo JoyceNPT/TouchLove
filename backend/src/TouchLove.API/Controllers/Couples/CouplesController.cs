@@ -39,17 +39,17 @@ public class CouplesController : ControllerBase
         ?? Guid.Empty.ToString());
 
     // ─── PUBLIC ───────────────────────────────────────────────────────
-    [HttpGet("{slug}")]
-    public async Task<IActionResult> GetCouplePage(string slug, CancellationToken ct)
-        => Ok(await _coupleService.GetCouplePageAsync(slug, ct));
+    [HttpGet("{coupleId:guid}")]
+    public async Task<IActionResult> GetCouplePage(Guid coupleId, CancellationToken ct)
+        => Ok(await _coupleService.GetCouplePageAsync(coupleId, ct));
 
-    [HttpGet("{slug}/message/today")]
-    public async Task<IActionResult> GetTodayMessage(string slug, CancellationToken ct)
-        => Ok(await _messageService.GetTodayMessageAsync(slug, ct));
+    [HttpGet("{coupleId:guid}/message/today")]
+    public async Task<IActionResult> GetTodayMessage(Guid coupleId, CancellationToken ct)
+        => Ok(await _messageService.GetTodayMessageAsync(coupleId, ct));
 
-    [HttpGet("{slug}/memories")]
-    public async Task<IActionResult> GetMemories(string slug, [FromQuery] int page = 1, [FromQuery] int size = 20, CancellationToken ct = default)
-        => Ok(await _albumService.GetMemoriesAsync(slug, page, size, ct));
+    [HttpGet("{coupleId:guid}/memories")]
+    public async Task<IActionResult> GetMemories(Guid coupleId, [FromQuery] int page = 1, [FromQuery] int size = 20, CancellationToken ct = default)
+        => Ok(await _albumService.GetMemoriesAsync(coupleId, page, size, ct));
 
     // ─── AUTHENTICATED ────────────────────────────────────────────────
     [Authorize]
@@ -64,8 +64,8 @@ public class CouplesController : ControllerBase
 
     [Authorize]
     [HttpPost("{coupleId:guid}/memories")]
-    public async Task<IActionResult> UploadMemory(Guid coupleId, IFormFile file, [FromForm] string? caption, CancellationToken ct)
-        => Ok(await _albumService.UploadMemoryAsync(coupleId, UserId, file, caption, ct));
+    public async Task<IActionResult> UploadMemory(Guid coupleId, [FromForm] List<IFormFile> files, [FromForm] string? caption, CancellationToken ct)
+        => Ok(await _albumService.UploadMemoryAsync(coupleId, UserId, files, caption, ct));
 
     [Authorize]
     [HttpPost("{coupleId:guid}/unpair/request")]
@@ -91,10 +91,30 @@ public class CouplesController : ControllerBase
     public async Task<IActionResult> GetMessages(Guid coupleId, [FromQuery] int days = 30, CancellationToken ct = default)
         => Ok(await _messageService.GetHistoryAsync(coupleId, UserId, days, ct));
 
-    [HttpGet("{slug}/milestones")]
-    public async Task<IActionResult> GetMilestones(string slug, CancellationToken ct)
+    [Authorize]
+    [HttpPost("{coupleId:guid}/propose-start-date")]
+    public async Task<IActionResult> ProposeStartDate(Guid coupleId, [FromBody] ProposeStartDateRequest req, CancellationToken ct)
+        => Ok(await _coupleService.ProposeStartDateAsync(coupleId, UserId, req.ProposedDate, ct));
+
+    [Authorize]
+    [HttpPost("{coupleId:guid}/confirm-start-date")]
+    public async Task<IActionResult> ConfirmStartDate(Guid coupleId, CancellationToken ct)
+        => Ok(await _coupleService.ConfirmStartDateAsync(coupleId, UserId, ct));
+
+    [Authorize]
+    [HttpPost("{coupleId:guid}/reject-start-date")]
+    public async Task<IActionResult> RejectStartDate(Guid coupleId, CancellationToken ct)
+        => Ok(await _coupleService.RejectStartDateAsync(coupleId, UserId, ct));
+
+    [Authorize]
+    [HttpPost("{coupleId:guid}/privacy-settings")]
+    public async Task<IActionResult> UpdatePrivacySettings(Guid coupleId, [FromBody] UpdatePrivacySettingsRequest req, CancellationToken ct)
+        => Ok(await _coupleService.UpdatePrivacySettingsAsync(coupleId, UserId, req, ct));
+
+    [HttpGet("{coupleId:guid}/milestones")]
+    public async Task<IActionResult> GetMilestones(Guid coupleId, CancellationToken ct)
     {
-        var coupleRes = await _coupleService.GetCouplePageAsync(slug, ct);
+        var coupleRes = await _coupleService.GetCouplePageAsync(coupleId, ct);
         if (!coupleRes.Success || coupleRes.Data == null) return NotFound();
         
         var startDate = coupleRes.Data.StartDate.ToDateTime(TimeOnly.MinValue);
@@ -102,3 +122,5 @@ public class CouplesController : ControllerBase
         return Ok(ApiResponse<List<MilestoneInfo>>.Ok(milestones));
     }
 }
+
+public record ProposeStartDateRequest(DateOnly ProposedDate);

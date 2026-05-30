@@ -56,7 +56,7 @@ public class AdminService
     // ─── Users ─────────────────────────────────────────────────────────
     public async Task<ApiResponse<PagedResult<AdminUserDto>>> GetUsersAsync(string? search, string? status, int page, int size, CancellationToken ct = default)
     {
-        var query = _userManager.Users.AsQueryable();
+        var query = _userManager.Users.Where(u => u.UserType == UserType.Sales).AsQueryable();
         if (!string.IsNullOrEmpty(search))
             query = query.Where(u => u.Email!.Contains(search) || u.DisplayName.Contains(search));
         if (status == "blocked") query = query.Where(u => !u.IsActive);
@@ -65,7 +65,7 @@ public class AdminService
         var total = await query.CountAsync(ct);
         var items = await query
             .Skip((page - 1) * size).Take(size)
-            .Select(u => new AdminUserDto(u.Id, u.DisplayName, u.Email!, u.IsActive, u.IsEmailVerified, u.CreatedAt))
+            .Select(u => new AdminUserDto(u.Id, u.DisplayName, u.Email!, u.IsActive, u.IsEmailVerified, u.CreatedAt, u.Gender, u.DateOfBirth, u.Bio))
             .ToListAsync(ct);
 
         return ApiResponse<PagedResult<AdminUserDto>>.Ok(new PagedResult<AdminUserDto>
@@ -102,7 +102,7 @@ public class AdminService
             var keyId = Guid.NewGuid().ToString();
             var keychain = new Domain.Entities.Keychain { KeyId = keyId };
             _db.Keychains.Add(keychain);
-            result.Add(new KeychainSummaryDto(keychain.Id, keychain.KeyId, keychain.Status, keychain.CreatedAt, keychain.ActivatedAt));
+            result.Add(new KeychainSummaryDto(keychain.Id, keychain.KeyId, keychain.Status, keychain.CreatedAt, keychain.ActivatedAt, null, null, null, null, null, null, null, null, null));
         }
         await _db.SaveChangesAsync(ct);
         return ApiResponse<List<KeychainSummaryDto>>.Ok(result, $"{count} keychains created.");
@@ -140,9 +140,15 @@ public class AdminService
 
         var total = await query.CountAsync(ct);
         var items = await query
+            .Include(k => k.Couple)
+            .Include(k => k.User)
             .OrderByDescending(k => k.CreatedAt)
             .Skip((page - 1) * size).Take(size)
-            .Select(k => new KeychainSummaryDto(k.Id, k.KeyId, k.Status, k.CreatedAt, k.ActivatedAt))
+            .Select(k => new KeychainSummaryDto(
+                k.Id, k.KeyId, k.Status, k.CreatedAt, k.ActivatedAt,
+                k.CoupleId, k.Couple != null ? k.Couple.CoupleName : null, k.Couple != null ? k.Couple.CoupleSlug : null,
+                k.UserId, k.User != null ? k.User.DisplayName : null, k.User != null ? k.User.Gender : null, k.User != null ? k.User.DateOfBirth : null, k.User != null ? k.User.Bio : null, k.User != null ? k.User.NfcPassword : null
+            ))
             .ToListAsync(ct);
 
         return ApiResponse<PagedResult<KeychainSummaryDto>>.Ok(new PagedResult<KeychainSummaryDto>
@@ -214,6 +220,10 @@ public record AdminStatsDto(int TotalCouples, int ActiveCouples, int TotalUsers,
     TemplateStats TemplatesByStatus, List<DailyCount> NewCouplesLast7Days);
 public record TemplateStats(int Draft, int Published, int Archived);
 public record DailyCount(DateTime Date, int Count);
-public record AdminUserDto(Guid Id, string DisplayName, string Email, bool IsActive, bool IsEmailVerified, DateTime CreatedAt);
-public record KeychainSummaryDto(Guid Id, string KeyId, KeychainStatus Status, DateTime CreatedAt, DateTime? ActivatedAt);
+public record AdminUserDto(Guid Id, string DisplayName, string Email, bool IsActive, bool IsEmailVerified, DateTime CreatedAt, string? Gender, DateOnly? DateOfBirth, string? Bio);
+public record KeychainSummaryDto(
+    Guid Id, string KeyId, KeychainStatus Status, DateTime CreatedAt, DateTime? ActivatedAt,
+    Guid? CoupleId, string? CoupleName, string? CoupleSlug,
+    Guid? UserId, string? UserDisplayName, string? UserGender, DateOnly? UserDateOfBirth, string? UserBio, string? NfcPassword
+);
 public record TemplateDto(Guid Id, string Content, string Language, string? Category, TemplateStatus Status, DateTime? PublishedAt, DateTime CreatedAt);

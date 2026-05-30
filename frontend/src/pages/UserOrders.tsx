@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Package, ChevronDown, ChevronUp, Clock, Truck, CheckCircle, XCircle, AlertCircle, RefreshCw, Undo2 } from 'lucide-react';
 import { axiosInstance } from '../api/axiosInstance';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from '../store/useToastStore';
 
 interface Order {
   id: string;
@@ -48,13 +49,13 @@ const UserOrders = () => {
     try {
       const res = await axiosInstance.post(`/store/orders/${id}/cancel`);
       if (res.data.success) {
-        alert('Đã gửi yêu cầu hủy đơn hàng.');
+        toast.success('Đã gửi yêu cầu hủy đơn hàng.');
         fetchOrders();
       } else {
-        alert(res.data.message);
+        toast.error(res.data.message);
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Không thể hủy đơn hàng.');
+      toast.error(err.response?.data?.message || 'Không thể hủy đơn hàng.');
     }
   };
 

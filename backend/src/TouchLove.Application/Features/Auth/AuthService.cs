@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using TouchLove.Application.Interfaces;
 using TouchLove.Domain.Entities;
 using TouchLove.Shared;
+using Google.Apis.Auth;
 
 namespace TouchLove.Application.Features.Auth;
 
@@ -152,7 +153,7 @@ public class AuthService
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: rawRefreshToken,
-            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive),
+            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname),
             ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes)
         ));
     }
@@ -303,8 +304,17 @@ public class AuthService
         
         if (!user.IsActive) return ApiResponse<UserDto>.Fail("Account suspended.");
 
+        // Include coupleId for NFC users
+        Guid? coupleId = null;
+        if (user.UserType == Domain.Enums.UserType.NFC)
+        {
+            var keychain = await _db.Keychains
+                .FirstOrDefaultAsync(k => k.UserId == userId && k.Status == Domain.Enums.KeychainStatus.Paired, ct);
+            coupleId = keychain?.CoupleId;
+        }
+
         var roles = await _userManager.GetRolesAsync(user);
-        return ApiResponse<UserDto>.Ok(new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive));
+        return ApiResponse<UserDto>.Ok(new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname, coupleId));
     }
 
     public async Task<ApiResponse<string>> LogoutAsync(string rawToken, CancellationToken ct = default)
@@ -383,6 +393,7 @@ public class AuthService
         var keychain = await _db.Keychains
             .Include(k => k.User)
             .FirstOrDefaultAsync(k => k.KeyId == keyId, ct);
+        var coupleIdForRedirect = keychain?.CoupleId;
 
         if (keychain == null)
             return ApiResponse<LoginResponse>.Fail("Chip NFC không hợp lệ.");
@@ -427,9 +438,123 @@ public class AuthService
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: rawRefreshToken,
-            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive),
-            ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes)
+            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname),
+            ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes),
+            CoupleId: coupleIdForRedirect
         ));
+    }
+
+    public async Task<ApiResponse<LoginResponse>> LoginByNfcWithPasswordAsync(string keyId, string passcode, CancellationToken ct = default)
+    {
+        var keychain = await _db.Keychains
+            .Include(k => k.User)
+            .FirstOrDefaultAsync(k => k.KeyId == keyId, ct);
+        var coupleIdForRedirect = keychain?.CoupleId;
+
+        if (keychain == null)
+            return ApiResponse<LoginResponse>.Fail("Chip NFC không hợp lệ.");
+
+        if (keychain.UserId == null)
+            return ApiResponse<LoginResponse>.Fail("NFC chưa được kích hoạt tài khoản.");
+
+        var user = keychain.User!;
+        if (user.NfcPassword != passcode)
+            return ApiResponse<LoginResponse>.Fail("Mật khẩu quét NFC không chính xác.");
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var accessToken = GenerateJwtToken(user, roles);
+        var (rawRefreshToken, refreshTokenEntity) = GenerateRefreshToken(user.Id, true);
+
+        _db.RefreshTokens.Add(refreshTokenEntity);
+        await _db.SaveChangesAsync(ct);
+
+        return ApiResponse<LoginResponse>.Ok(new LoginResponse(
+            AccessToken: accessToken,
+            RefreshToken: rawRefreshToken,
+            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname),
+            ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes),
+            CoupleId: coupleIdForRedirect
+        ));
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // GOOGLE LOGIN
+    // ──────────────────────────────────────────────────────────────────
+    public async Task<ApiResponse<LoginResponse>> LoginByGoogleAsync(string credentialToken, CancellationToken ct = default)
+    {
+        try
+        {
+            var settings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[] { _config["Google:ClientId"] }
+            };
+
+            var payload = await GoogleJsonWebSignature.ValidateAsync(credentialToken, settings);
+            if (payload == null)
+                return ApiResponse<LoginResponse>.Fail("Xác thực tài khoản Google thất bại.");
+
+            var email = payload.Email;
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                // Create a new user for this Google account
+                user = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    DisplayName = payload.Name ?? email.Split('@')[0],
+                    AvatarUrl = payload.Picture,
+                    IsActive = true,
+                    IsEmailVerified = true, // Google accounts are auto-verified
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                // Generate random password for ASP.NET Identity requirement
+                var result = await _userManager.CreateAsync(user, Guid.NewGuid().ToString() + "Google123!");
+                if (!result.Succeeded)
+                {
+                    var errors = result.Errors.Select(e => e.Description).ToList();
+                    return ApiResponse<LoginResponse>.Fail("Không thể tạo tài khoản từ Google.", errors);
+                }
+
+                await _userManager.AddToRoleAsync(user, Constants.Roles.User);
+                _db.UserSettings.Add(new UserSetting { UserId = user.Id });
+                await _db.SaveChangesAsync(ct);
+            }
+            else
+            {
+                // Sync profile picture if available
+                if (string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(payload.Picture))
+                {
+                    user.AvatarUrl = payload.Picture;
+                    user.UpdatedAt = DateTime.UtcNow;
+                    await _db.SaveChangesAsync(ct);
+                }
+            }
+
+            if (!user.IsActive)
+                return ApiResponse<LoginResponse>.Fail("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.");
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var accessToken = GenerateJwtToken(user, roles);
+            var (rawRefreshToken, refreshTokenEntity) = GenerateRefreshToken(user.Id, true);
+
+            _db.RefreshTokens.Add(refreshTokenEntity);
+            await _db.SaveChangesAsync(ct);
+
+            return ApiResponse<LoginResponse>.Ok(new LoginResponse(
+                AccessToken: accessToken,
+                RefreshToken: rawRefreshToken,
+                User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname),
+                ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes)
+            ));
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<LoginResponse>.Fail($"Đăng nhập bằng Google gặp lỗi: {ex.Message}");
+        }
     }
 
     private string GenerateJwtToken(User user, IList<string> roles)
@@ -492,6 +617,6 @@ public class AuthService
 public record RegisterRequest(string Email, string Password, string DisplayName, string CaptchaToken);
 public record LoginRequest(string Email, string Password, bool RememberMe, string CaptchaToken);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
-public record LoginResponse(string AccessToken, string RefreshToken, UserDto User, DateTime ExpiresAt);
+public record LoginResponse(string AccessToken, string RefreshToken, UserDto User, DateTime ExpiresAt, Guid? CoupleId = null);
 public record RefreshResponse(string AccessToken, string RefreshToken, DateTime ExpiresAt);
-public record UserDto(Guid Id, string DisplayName, string Email, string? AvatarUrl, string Role, bool IsActive);
+public record UserDto(Guid Id, string DisplayName, string Email, string? AvatarUrl, string Role, bool IsActive, string UserType, string? Nickname, Guid? CoupleId = null);

@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: dev
       POSTGRES_PASSWORD: dev123
     ports:
-      - "5433:5432"
+      - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -35,6 +35,8 @@ services:
       Redis__ConnectionString: redis:6379
       Email__Host: mailhog
       Email__Port: 1025
+      Google__ClientId: ${TOUCHLOVE_GOOGLE_CLIENT_ID}
+      Google__ClientSecret: ${TOUCHLOVE_GOOGLE_CLIENT_SECRET}
     ports:
       - "5000:8080"
     depends_on:

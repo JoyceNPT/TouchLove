@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Package, Plus, Trash2, Edit, AlertCircle, Loader2, ChevronRight, PackageCheck, PackageX } from 'lucide-react';
 import { axiosInstance } from '../../api/axiosInstance';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from '../../store/useToastStore';
 
 interface Product {
   id: string;
@@ -43,10 +44,10 @@ const AdminProducts = () => {
       if (res.data.success) {
         setProducts(products.filter(p => p.id !== id));
       } else {
-        alert(res.data.message);
+        toast.error(res.data.message);
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Không thể xóa sản phẩm.');
+      toast.error(err.response?.data?.message || 'Không thể xóa sản phẩm.');
     } finally {
       setIsDeleting(null);
     }

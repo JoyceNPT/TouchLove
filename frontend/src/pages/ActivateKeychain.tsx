@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Smartphone, CheckCircle2, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { Smartphone, CheckCircle, Loader2, Star, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 
 const ActivateKeychain = () => {
@@ -52,7 +52,7 @@ const ActivateKeychain = () => {
             <div className="relative">
               <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center">
                 {status === 'success' ? (
-                  <CheckCircle2 className="w-12 h-12 text-green-500" />
+                  <CheckCircle className="w-12 h-12 text-green-500" />
                 ) : (
                   <Smartphone className="w-12 h-12 text-primary" />
                 )}
@@ -97,7 +97,7 @@ const ActivateKeychain = () => {
               ) : (
                 <>
                   <span>Kích hoạt ngay</span>
-                  <Sparkles className="w-5 h-5" />
+                  <Star className="w-5 h-5" />
                 </>
               )}
             </button>

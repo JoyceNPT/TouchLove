@@ -9,6 +9,9 @@ public class Couple : BaseEntity
     public string CoupleSlug { get; set; } = string.Empty; // unique, partial index IsDeleted=false
     public string? CoupleName { get; set; }
     public DateOnly StartDate { get; set; }             // Ngày bắt đầu yêu
+    public bool IsStartDateConfirmed { get; set; } = false;
+    public DateOnly? ProposedStartDate { get; set; }
+    public Guid? ProposedByUserId { get; set; }
     public string? Description { get; set; }
     public string? AvatarAUrl { get; set; }
     public string? AvatarBUrl { get; set; }
@@ -16,6 +19,11 @@ public class Couple : BaseEntity
     public bool IsActive { get; set; } = true;
     public DateTime PairedAt { get; set; }
     public DateTime? UnpairedAt { get; set; }
+
+    public bool IsPublic { get; set; } = true;
+    public bool IsAlbumPublic { get; set; } = true;
+    public bool IsAnniversariesPublic { get; set; } = true;
+    public bool IsAchievementsPublic { get; set; } = true;
 
     // Navigation
     public Keychain? KeychainA { get; set; }

@@ -25,19 +25,6 @@ const Profile = () => {
 
       <div className="space-y-4">
         <h2 className="text-lg font-bold mb-4">Quản lý</h2>
-        
-        <ProfileItem 
-          icon={<Heart className="w-5 h-5 text-pink-500" />} 
-          title="Trang cặp đôi" 
-          description="Xem và chỉnh sửa trang chung của hai bạn"
-          link="/c/demo" // Should be dynamic
-        />
-        
-        <ProfileItem 
-          icon={<Smartphone className="w-5 h-5 text-blue-500" />} 
-          title="Keychain của tôi" 
-          description="Quản lý móc khóa NFC đã kích hoạt"
-        />
 
         <ProfileItem 
           icon={<Shield className="w-5 h-5 text-green-500" />} 

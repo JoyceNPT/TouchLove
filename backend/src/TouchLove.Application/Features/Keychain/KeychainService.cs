@@ -133,8 +133,8 @@ public class KeychainService
         await _db.SaveChangesAsync(ct);
 
         // Send emails
-        await emailService.SendPairingSuccessAsync(partnerA.Email!, partnerB.DisplayName, slug, ct);
-        await emailService.SendPairingSuccessAsync(partnerB.Email!, partnerA.DisplayName, slug, ct);
+        await emailService.SendPairingSuccessAsync(partnerA.Email!, partnerB.DisplayName, couple.Id, ct);
+        await emailService.SendPairingSuccessAsync(partnerB.Email!, partnerA.DisplayName, couple.Id, ct);
 
         return ApiResponse<CoupleDto>.Ok(new CoupleDto(couple.Id, couple.CoupleSlug, couple.CoupleName), "Pairing successful! 💕");
     }

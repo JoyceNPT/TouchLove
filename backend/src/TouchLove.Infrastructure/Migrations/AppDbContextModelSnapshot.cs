@@ -152,6 +152,41 @@ namespace TouchLove.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TouchLove.Domain.Entities.AnniversaryReminder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRecurring")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AnniversaryReminders");
+                });
+
             modelBuilder.Entity("TouchLove.Domain.Entities.Couple", b =>
                 {
                     b.Property<Guid>("Id")
@@ -182,10 +217,25 @@ namespace TouchLove.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<bool>("IsAchievementsPublic")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsAlbumPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsAnniversariesPublic")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsStartDateConfirmed")
                         .HasColumnType("boolean");
 
                     b.Property<Guid>("KeychainAId")
@@ -199,6 +249,12 @@ namespace TouchLove.Infrastructure.Migrations
 
                     b.Property<DateTime>("PairedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ProposedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("ProposedStartDate")
+                        .HasColumnType("date");
 
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
@@ -343,6 +399,9 @@ namespace TouchLove.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("AdditionalMediaJson")
+                        .HasColumnType("text");
 
                     b.Property<string>("Caption")
                         .HasMaxLength(200)
@@ -823,12 +882,18 @@ namespace TouchLove.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("Bio")
+                        .HasColumnType("text");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
@@ -842,6 +907,9 @@ namespace TouchLove.Infrastructure.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Gender")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -849,6 +917,9 @@ namespace TouchLove.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsProfilePublic")
                         .HasColumnType("boolean");
 
                     b.Property<int>("Language")
@@ -859,6 +930,12 @@ namespace TouchLove.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NfcPassword")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nickname")
+                        .HasColumnType("text");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -892,6 +969,9 @@ namespace TouchLove.Infrastructure.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<int>("UserType")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -973,6 +1053,17 @@ namespace TouchLove.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("TouchLove.Domain.Entities.AnniversaryReminder", b =>
+                {
+                    b.HasOne("TouchLove.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TouchLove.Domain.Entities.Couple", b =>

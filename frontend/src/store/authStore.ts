@@ -5,9 +5,12 @@ import { useCartStore } from './useCartStore';
 interface User {
   id: string;
   displayName: string;
+  nickname?: string;
   email: string;
   avatarUrl?: string;
   role: string;
+  userType: string;
+  coupleId?: string; // Only for paired NFC users
 }
 
 interface AuthState {

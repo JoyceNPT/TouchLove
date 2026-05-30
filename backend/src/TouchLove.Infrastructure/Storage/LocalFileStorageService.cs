@@ -8,12 +8,13 @@ namespace TouchLove.Infrastructure.Storage;
 public class LocalFileStorageService : IFileStorageService
 {
     private readonly IWebHostEnvironment _env;
-    private static readonly string[] AllowedMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+    private static readonly string[] AllowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"];
     private static readonly Dictionary<string, byte[]> MagicBytes = new()
     {
         { "image/jpeg", [0xFF, 0xD8, 0xFF] },
         { "image/png",  [0x89, 0x50, 0x4E, 0x47] },
-        { "image/webp", [0x52, 0x49, 0x46, 0x46] } // RIFF header
+        { "image/webp", [0x52, 0x49, 0x46, 0x46] }, // RIFF header
+        { "video/webm", [0x1A, 0x45, 0xDF, 0xA3] }  // EBML (WebM)
     };
 
     public LocalFileStorageService(IWebHostEnvironment env)
@@ -23,16 +24,17 @@ public class LocalFileStorageService : IFileStorageService
 
     public async Task<FileUploadResult> UploadAsync(IFormFile file, string folder, CancellationToken ct = default)
     {
-        // Validate MIME type via magic bytes
         var mime = await DetectMimeTypeAsync(file, ct);
         if (!AllowedMimeTypes.Contains(mime))
-            throw new InvalidOperationException($"File type '{mime}' is not allowed. Only JPEG, PNG, WebP are accepted.");
+            throw new InvalidOperationException($"File type '{mime}' is not allowed. Only JPEG, PNG, WebP, MP4, WebM are accepted.");
 
         var ext = mime switch
         {
             "image/jpeg" => "jpg",
             "image/png" => "png",
             "image/webp" => "webp",
+            "video/mp4" => "mp4",
+            "video/webm" => "webm",
             _ => "bin"
         };
 
@@ -62,14 +64,29 @@ public class LocalFileStorageService : IFileStorageService
     private static async Task<string> DetectMimeTypeAsync(IFormFile file, CancellationToken ct)
     {
         using var stream = file.OpenReadStream();
-        var header = new byte[8];
-        await stream.ReadAsync(header, ct);
+        var header = new byte[12];
+        var bytesRead = await stream.ReadAsync(header, ct);
 
         foreach (var (mime, magic) in MagicBytes)
         {
             if (header.Take(magic.Length).SequenceEqual(magic))
                 return mime;
         }
+
+        // Resilient checks for MP4 (iso4, mp42, ftyp, etc. in header)
+        if (header.Length >= 8 && header[4] == 0x66 && header[5] == 0x74 && header[6] == 0x79 && header[7] == 0x70) // "ftyp"
+        {
+            return "video/mp4";
+        }
+
+        // Resilient fallback based on file content-type and extensions for safety
+        if (file.ContentType.StartsWith("video/"))
+        {
+            return file.ContentType;
+        }
+        var ext = Path.GetExtension(file.FileName).ToLower();
+        if (ext == ".mp4") return "video/mp4";
+        if (ext == ".webm") return "video/webm";
 
         return "application/octet-stream";
     }

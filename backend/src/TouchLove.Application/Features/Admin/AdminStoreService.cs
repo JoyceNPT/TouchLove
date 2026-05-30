@@ -9,10 +9,12 @@ namespace TouchLove.Application.Features.Admin;
 public class AdminStoreService
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICacheService _cache;
 
-    public AdminStoreService(IApplicationDbContext db)
+    public AdminStoreService(IApplicationDbContext db, ICacheService cache)
     {
         _db = db;
+        _cache = cache;
     }
 
     // SUPPLIERS
@@ -60,6 +62,7 @@ public class AdminStoreService
         };
         _db.Products.Add(p);
         await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync("store:products", ct);
         return ApiResponse<Guid>.Ok(p.Id);
     }
 
@@ -76,6 +79,8 @@ public class AdminStoreService
         p.ImageUrls = req.ImageUrls;
 
         await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync("store:products", ct);
+        await _cache.RemoveAsync($"store:product:{p.Slug}", ct);
         return ApiResponse<string>.Ok("Cập nhật sản phẩm thành công.");
     }
 
@@ -99,6 +104,8 @@ public class AdminStoreService
 
         p.IsDeleted = true;
         await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync("store:products", ct);
+        await _cache.RemoveAsync($"store:product:{p.Slug}", ct);
         return ApiResponse<string>.Ok("Đã xóa sản phẩm thành công (Soft Delete).");
     }
 

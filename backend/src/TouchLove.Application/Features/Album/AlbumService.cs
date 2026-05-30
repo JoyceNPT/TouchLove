@@ -19,18 +19,41 @@ public class AlbumService
         _cache = cache;
     }
 
-    public async Task<ApiResponse<PagedResult<MemoryDto>>> GetMemoriesAsync(string coupleSlug, int page, int size, CancellationToken ct = default)
+    public async Task<ApiResponse<PagedResult<MemoryDto>>> GetMemoriesAsync(Guid coupleId, int page, int size, CancellationToken ct = default)
     {
-        var couple = await _db.Couples.FirstOrDefaultAsync(c => c.CoupleSlug == coupleSlug, ct);
-        if (couple == null) return ApiResponse<PagedResult<MemoryDto>>.Fail("Couple not found.");
-
-        var query = _db.Memories.Where(m => m.CoupleId == couple.Id);
+        var query = _db.Memories.Where(m => m.CoupleId == coupleId);
         var total = await query.CountAsync(ct);
-        var items = await query
+        var memories = await query
+            .Include(m => m.UploadedByUser)
             .OrderBy(m => m.SortOrder).ThenByDescending(m => m.CreatedAt)
             .Skip((page - 1) * size).Take(size)
-            .Select(m => new MemoryDto(m.Id, _storage.GetPublicUrl(m.StoragePath), m.Caption, m.SortOrder, m.MimeType, m.CreatedAt))
             .ToListAsync(ct);
+
+        var items = memories.Select(m => {
+            List<string> additionalUrls = null;
+            if (!string.IsNullOrEmpty(m.AdditionalMediaJson))
+            {
+                try
+                {
+                    var mediaItems = System.Text.Json.JsonSerializer.Deserialize<List<MemoryMediaItem>>(m.AdditionalMediaJson);
+                    if (mediaItems != null)
+                    {
+                        additionalUrls = mediaItems.Select(x => _storage.GetPublicUrl(x.StoragePath)).ToList();
+                    }
+                }
+                catch { }
+            }
+
+            return new MemoryDto(
+                m.Id, 
+                _storage.GetPublicUrl(m.StoragePath), 
+                m.Caption, 
+                m.SortOrder, 
+                m.MimeType, 
+                m.CreatedAt, 
+                m.UploadedByUser != null ? m.UploadedByUser.DisplayName : "Ẩn danh",
+                additionalUrls);
+        }).ToList();
 
         return ApiResponse<PagedResult<MemoryDto>>.Ok(new PagedResult<MemoryDto>
         {
@@ -38,8 +61,11 @@ public class AlbumService
         });
     }
 
-    public async Task<ApiResponse<MemoryDto>> UploadMemoryAsync(Guid coupleId, Guid userId, Microsoft.AspNetCore.Http.IFormFile file, string? caption, CancellationToken ct = default)
+    public async Task<ApiResponse<MemoryDto>> UploadMemoryAsync(Guid coupleId, Guid userId, List<Microsoft.AspNetCore.Http.IFormFile> files, string? caption, CancellationToken ct = default)
     {
+        if (files == null || files.Count == 0)
+            return ApiResponse<MemoryDto>.Fail("No files selected.");
+
         if (!await IsPartnerAsync(coupleId, userId, ct))
             return ApiResponse<MemoryDto>.Fail("Access denied.");
 
@@ -47,32 +73,73 @@ public class AlbumService
         if (count >= Constants.Album.MaxMemoriesPerCouple)
             return ApiResponse<MemoryDto>.Fail($"Album limit of {Constants.Album.MaxMemoriesPerCouple} photos reached.");
 
-        if (file.Length > Constants.Album.MaxFileSizeBytes)
-            return ApiResponse<MemoryDto>.Fail("File size exceeds 10MB limit.");
+        foreach (var file in files)
+        {
+            if (file.Length > Constants.Album.MaxFileSizeBytes)
+                return ApiResponse<MemoryDto>.Fail($"File size of {file.FileName} exceeds 10MB limit.");
+        }
 
-        var uploadResult = await _storage.UploadAsync(file, coupleId.ToString(), ct);
+        var mediaItems = new List<MemoryMediaItem>();
+        string primaryUrl = string.Empty;
+
+        for (int i = 0; i < files.Count; i++)
+        {
+            var file = files[i];
+            var uploadResult = await _storage.UploadAsync(file, coupleId.ToString(), ct);
+            
+            if (i == 0)
+            {
+                primaryUrl = uploadResult.PublicUrl;
+            }
+
+            mediaItems.Add(new MemoryMediaItem
+            {
+                StoragePath = uploadResult.StoragePath,
+                MimeType = file.ContentType,
+                OriginalFileName = file.FileName,
+                FileSizeBytes = file.Length
+            });
+        }
 
         var maxSort = await _db.Memories.Where(m => m.CoupleId == coupleId).MaxAsync(m => (int?)m.SortOrder, ct) ?? 0;
+
+        var firstFile = files[0];
+        var firstUpload = mediaItems[0];
 
         var memory = new Memory
         {
             CoupleId = coupleId,
             UploadedByUserId = userId,
-            StoragePath = uploadResult.StoragePath,
-            StorageType = uploadResult.StorageType,
-            OriginalFileName = file.FileName,
-            MimeType = file.ContentType,
-            FileSizeBytes = file.Length,
+            StoragePath = firstUpload.StoragePath,
+            StorageType = TouchLove.Domain.Enums.StorageType.Local,
+            OriginalFileName = firstFile.FileName,
+            MimeType = firstFile.ContentType,
+            FileSizeBytes = firstFile.Length,
             Caption = caption?.Length > 200 ? caption[..200] : caption,
-            SortOrder = maxSort + 1
+            SortOrder = maxSort + 1,
+            AdditionalMediaJson = System.Text.Json.JsonSerializer.Serialize(mediaItems)
         };
+
         _db.Memories.Add(memory);
         await _db.SaveChangesAsync(ct);
 
         var couple = await _db.Couples.FindAsync([coupleId], ct);
         if (couple != null) await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
 
-        return ApiResponse<MemoryDto>.Ok(new MemoryDto(memory.Id, uploadResult.PublicUrl, memory.Caption, memory.SortOrder, memory.MimeType, memory.CreatedAt));
+        var user = await _db.Users.FindAsync([userId], ct);
+        var uploaderName = user?.DisplayName ?? "Ẩn danh";
+
+        var additionalUrls = mediaItems.Select(x => _storage.GetPublicUrl(x.StoragePath)).ToList();
+
+        return ApiResponse<MemoryDto>.Ok(new MemoryDto(
+            memory.Id, 
+            primaryUrl, 
+            memory.Caption, 
+            memory.SortOrder, 
+            memory.MimeType, 
+            memory.CreatedAt, 
+            uploaderName,
+            additionalUrls));
     }
 
     public async Task<ApiResponse<string>> DeleteMemoryAsync(Guid memoryId, Guid userId, CancellationToken ct = default)
@@ -114,4 +181,4 @@ public class AlbumService
     }
 }
 
-public record MemoryDto(Guid Id, string Url, string? Caption, int SortOrder, string MimeType, DateTime CreatedAt);
+public record MemoryDto(Guid Id, string Url, string? Caption, int SortOrder, string MimeType, DateTime CreatedAt, string? UploadedBy, List<string>? AdditionalUrls = null);

@@ -91,6 +91,12 @@ const AdminLayout = () => {
             {navItems.find(i => i.path === location.pathname)?.label || 'Admin Panel'}
           </h2>
           <div className="flex items-center gap-4">
+            <Link 
+              to="/profile" 
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-xs font-black transition-all"
+            >
+              <Users className="w-4 h-4" /> Quay lại Profile
+            </Link>
             <div className="p-2 glass rounded-lg cursor-pointer">
               <Settings className="w-5 h-5" />
             </div>

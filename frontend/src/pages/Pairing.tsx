@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Send, Users, ArrowRight, Loader2, Copy, Check, Sparkles } from 'lucide-react';
+import { Heart, Send, Users, ArrowRight, Loader2, Copy, Check } from 'lucide-react';
 import axios from 'axios';
 
 const Pairing = () => {
@@ -39,7 +39,7 @@ const Pairing = () => {
       const response = await axios.post('/api/pairing/accept', { inviteCode });
       if (response.data.success) {
         // Success! Redirect to the new couple page
-        navigate(`/c/${response.data.data.slug}`);
+        navigate(`/couple/${response.data.data.slug}`);
       } else {
         setError(response.data.message);
       }
@@ -116,7 +116,7 @@ const Pairing = () => {
               className="text-center"
             >
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Sparkles className="w-10 h-10 text-primary" />
+                <Heart className="w-10 h-10 text-primary fill-primary/10" />
               </div>
               <h1 className="text-2xl font-bold mb-2">Mã mời của bạn</h1>
               <p className="text-muted-foreground mb-8">Gửi mã này cho Partner của bạn để kết đôi.</p>

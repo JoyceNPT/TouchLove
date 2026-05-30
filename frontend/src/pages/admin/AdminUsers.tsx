@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Users, 
   Search, 
@@ -7,9 +7,11 @@ import {
   Mail,
   Calendar,
   MoreVertical,
-  RefreshCw
+  RefreshCw,
+  User as UserIcon
 } from 'lucide-react';
 import axiosInstance from '../../api/axiosInstance';
+import { toast } from '../../store/useToastStore';
 
 interface User {
   id: string;
@@ -18,12 +20,16 @@ interface User {
   isActive: boolean;
   isEmailVerified: boolean;
   createdAt: string;
+  gender?: string;
+  dateOfBirth?: string;
+  bio?: string;
 }
 
 const AdminUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -51,9 +57,10 @@ const AdminUsers = () => {
         setUsers(prev => prev.map(u => 
           u.id === user.id ? { ...u, isActive: !u.isActive } : u
         ));
+        toast.success(`${user.isActive ? 'Khóa' : 'Mở khóa'} người dùng thành công!`);
       }
     } catch (err) {
-      alert('Lỗi khi cập nhật trạng thái người dùng.');
+      toast.error('Lỗi khi cập nhật trạng thái người dùng.');
     }
   };
 
@@ -104,57 +111,93 @@ const AdminUsers = () => {
                     <td colSpan={5} className="px-6 py-4 h-16 bg-zinc-50/50 dark:bg-zinc-800/20" />
                   </tr>
                 ))
-              ) : filteredUsers.map((u) => (
-                <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
-                        <Users className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">{u.displayName}</p>
-                        <p className="text-xs text-zinc-500 flex items-center gap-1">
-                          <Mail className="w-3 h-3" /> {u.email}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {u.isEmailVerified ? (
-                      <span className="text-green-500 text-xs font-bold">Đã xác minh</span>
-                    ) : (
-                      <span className="text-zinc-400 text-xs font-bold">Chưa xác minh</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                      u.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-                    }`}>
-                      {u.isActive ? 'Hoạt động' : 'Đã khóa'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-zinc-500">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" /> {new Date(u.createdAt).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => toggleUserStatus(u)}
-                        className={`p-2 rounded-lg transition-all ${
-                          u.isActive ? 'text-red-500 hover:bg-red-500/10' : 'text-green-500 hover:bg-green-500/10'
-                        }`}
-                        title={u.isActive ? 'Khóa người dùng' : 'Mở khóa người dùng'}
-                      >
-                        {u.isActive ? <ShieldAlert className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
-                      </button>
-                      <button className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+              ) : filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-20 text-center text-zinc-500 font-bold">Không tìm thấy người dùng nào.</td>
                 </tr>
+              ) : filteredUsers.map((u) => (
+                <React.Fragment key={u.id}>
+                  <tr 
+                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors group cursor-pointer"
+                    onClick={() => setExpandedUserId(expandedUserId === u.id ? null : u.id)}
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                          <Users className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm">{u.displayName}</p>
+                          <p className="text-xs text-zinc-500 flex items-center gap-1">
+                            <Mail className="w-3 h-3" /> {u.email}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {u.isEmailVerified ? (
+                        <span className="text-green-500 text-xs font-bold">Đã xác minh</span>
+                      ) : (
+                        <span className="text-zinc-400 text-xs font-bold">Chưa xác minh</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                        u.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                      }`}>
+                        {u.isActive ? 'Hoạt động' : 'Đã khóa'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-zinc-500">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" /> {new Date(u.createdAt).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => toggleUserStatus(u)}
+                          className={`p-2 rounded-lg transition-all ${
+                            u.isActive ? 'text-red-500 hover:bg-red-500/10' : 'text-green-500 hover:bg-green-500/10'
+                          }`}
+                          title={u.isActive ? 'Khóa người dùng' : 'Mở khóa người dùng'}
+                        >
+                          {u.isActive ? <ShieldAlert className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                        </button>
+                        <button 
+                          onClick={() => setExpandedUserId(expandedUserId === u.id ? null : u.id)}
+                          className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {expandedUserId === u.id && (
+                    <tr className="bg-zinc-50/50 dark:bg-zinc-800/10">
+                      <td colSpan={5} className="px-8 py-6 border-t border-b border-zinc-150 dark:border-zinc-800">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                          <div className="space-y-1 bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-150 dark:border-zinc-800/50">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block mb-1">Giới tính</span>
+                            <span className="font-bold text-zinc-800 dark:text-zinc-200">{u.gender || 'Chưa thiết lập'}</span>
+                          </div>
+                          <div className="space-y-1 bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-150 dark:border-zinc-800/50">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block mb-1">Ngày sinh</span>
+                            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                              {u.dateOfBirth ? new Date(u.dateOfBirth).toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Chưa thiết lập'}
+                            </span>
+                          </div>
+                          <div className="space-y-1 bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-150 dark:border-zinc-800/50 md:col-span-3">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block mb-1">Tiểu sử (Bio)</span>
+                            <p className="italic text-zinc-600 dark:text-zinc-300 font-medium">
+                              "{u.bio || 'Chưa thiết lập tiểu sử cá nhân.'}"
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

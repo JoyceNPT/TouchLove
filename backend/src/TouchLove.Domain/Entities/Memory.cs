@@ -15,8 +15,17 @@ public class Memory : BaseEntity
     public string? Caption { get; set; }
     public int SortOrder { get; set; } = 0;
     public DateTime? DeleteScheduledAt { get; set; }          // Hangfire hard delete time
+    public string? AdditionalMediaJson { get; set; }
 
     // Navigation
     public Couple? Couple { get; set; }
     public User? UploadedByUser { get; set; }
+}
+
+public class MemoryMediaItem
+{
+    public string StoragePath { get; set; } = string.Empty;
+    public string MimeType { get; set; } = string.Empty;
+    public string OriginalFileName { get; set; } = string.Empty;
+    public long FileSizeBytes { get; set; }
 }

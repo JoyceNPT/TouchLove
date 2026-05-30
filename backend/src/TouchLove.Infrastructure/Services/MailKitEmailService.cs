@@ -68,12 +68,12 @@ public class MailKitEmailService : IEmailService
             </div>
             """, ct);
 
-    public Task SendPairingSuccessAsync(string email, string partnerDisplayName, string coupleSlug, CancellationToken ct = default)
+    public Task SendPairingSuccessAsync(string email, string partnerDisplayName, Guid coupleId, CancellationToken ct = default)
         => SendAsync(email, "Đã kết đôi thành công! 💕", $"""
             <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
             <h2 style="color:#e91e8c">💕 TouchLove</h2>
             <p>Chúc mừng! Bạn đã kết đôi thành công với <strong>{partnerDisplayName}</strong>!</p>
-            <a href="/c/{coupleSlug}" style="background:#e91e8c;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">
+            <a href="/couple/{coupleId}" style="background:#e91e8c;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">
             Xem trang của cặp đôi
             </a>
             </div>
@@ -85,6 +85,20 @@ public class MailKitEmailService : IEmailService
             <h2 style="color:#e91e8c">💕 TouchLove</h2>
             <p>Ngày mai là kỷ niệm <strong>{days} ngày</strong> yêu nhau của <strong>{coupleName}</strong>!</p>
             <p>Đừng quên chuẩn bị một điều gì đó đặc biệt nhé 💝</p>
+            </div>
+            """, ct);
+
+    public Task SendPersonalReminderAsync(string email, string title, DateOnly date, CancellationToken ct = default)
+        => SendAsync(email, $"⏰ Nhắc nhở kỷ niệm sắp tới: {title}!", $"""
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #eee;padding:24px;border-radius:16px">
+            <h2 style="color:#e91e8c;margin-top:0">💕 TouchLove</h2>
+            <p>Chào bạn, đây là lời nhắc tinh tế dành riêng cho bạn về sự kiện kỷ niệm sắp diễn ra sau 1 tuần nữa:</p>
+            <div style="background:#fff5f8;border-left:4px solid #e91e8c;padding:16px;margin:20px 0;border-radius:0 8px 8px 0">
+            <h3 style="margin:0 0 8px 0;color:#e91e8c">{title}</h3>
+            <p style="margin:0;font-weight:bold;color:#555">Ngày diễn ra: {date:dd/MM/yyyy}</p>
+            </div>
+            <p>Hãy cùng chuẩn bị một món quà nhỏ hoặc một bất ngờ ngọt ngào dành cho đối phương nhé 💝</p>
+            <p style="color:#999;font-size:12px;margin-top:24px">Đây là lời nhắc cá nhân được cài đặt bởi bạn và chỉ gửi duy nhất cho bạn.</p>
             </div>
             """, ct);
 }

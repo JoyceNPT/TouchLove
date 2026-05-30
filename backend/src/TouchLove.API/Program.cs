@@ -109,7 +109,15 @@ try
     builder.Services.AddScoped<AdminStoreService>();
 
     // ── Infrastructure Services ───────────────────────────────────────
-    builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+    var storageProvider = builder.Configuration["Storage:Provider"] ?? "Local";
+    if (storageProvider.Equals("S3", StringComparison.OrdinalIgnoreCase))
+    {
+        builder.Services.AddScoped<IFileStorageService, S3FileStorageService>();
+    }
+    else
+    {
+        builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+    }
     builder.Services.AddScoped<IEmailService, MailKitEmailService>();
 
     builder.Services.AddHttpClient<IAiMessageService, GeminiAiMessageService>();

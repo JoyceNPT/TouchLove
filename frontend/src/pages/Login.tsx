@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,6 +29,59 @@ const Login = () => {
   } = useForm<any>({
     resolver: zodResolver(loginSchema),
   });
+
+  const handleGoogleCredentialResponse = async (response: any) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await axiosInstance.post('/auth/google-login', {
+        credential: response.credential,
+      });
+
+      if (res.data.success) {
+        const { user, accessToken } = res.data.data;
+        setAuth(user, accessToken);
+        const redirect = searchParams.get('redirect') || '/';
+        navigate(redirect);
+      } else {
+        setError(res.data.message);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load Google Identity Services SDK dynamically
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      // @ts-ignore
+      if (window.google) {
+        // @ts-ignore
+        window.google.accounts.id.initialize({
+          // CẤU HÌNH: Thay Client ID của bạn ở đây để kết nối với Google Cloud của bạn
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '684995330023-q8p2p561ku1ktk5o01p4vhb5a86ishf4.apps.googleusercontent.com', 
+          callback: handleGoogleCredentialResponse,
+        });
+        // @ts-ignore
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-btn-container'),
+          { theme: 'outline', size: 'large', width: '100%', shape: 'pill' }
+        );
+      }
+    };
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
@@ -127,7 +180,17 @@ const Login = () => {
         </button>
       </form>
 
-      <div className="text-center text-sm text-muted-foreground pt-4">
+      <div className="relative flex py-2 items-center">
+        <div className="flex-grow border-t border-zinc-200 dark:border-zinc-800"></div>
+        <span className="flex-shrink mx-4 text-xs text-muted-foreground uppercase font-bold tracking-wider">Hoặc</span>
+        <div className="flex-grow border-t border-zinc-200 dark:border-zinc-800"></div>
+      </div>
+
+      <div className="flex justify-center">
+        <div id="google-btn-container" className="w-full h-[44px]"></div>
+      </div>
+
+      <div className="text-center text-sm text-muted-foreground pt-2">
         Chưa có tài khoản?{' '}
         <Link to="/register" className="text-primary font-bold hover:underline">
           Đăng ký ngay

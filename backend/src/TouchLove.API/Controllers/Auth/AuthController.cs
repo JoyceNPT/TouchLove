@@ -45,6 +45,28 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("google-login")]
+    public async Task<ActionResult<ApiResponse<LoginResponse>>> GoogleLogin([FromBody] GoogleLoginRequest req, CancellationToken ct)
+    {
+        var result = await _authService.LoginByGoogleAsync(req.Credential, ct);
+
+        if (result.Success && result.Data != null)
+        {
+            // Set Refresh Token in HttpOnly Cookie
+            Response.Cookies.Append("refreshToken", result.Data.RefreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false, // true in production
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(30)
+            });
+
+            return Ok(ApiResponse<LoginResponse>.Ok(result.Data with { RefreshToken = string.Empty }));
+        }
+
+        return Ok(result);
+    }
+
     [HttpPost("refresh")]
     public async Task<ActionResult<ApiResponse<RefreshResponse>>> Refresh(CancellationToken ct)
     {
@@ -98,3 +120,4 @@ public class AuthController : ControllerBase
 
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);
+public record GoogleLoginRequest(string Credential);

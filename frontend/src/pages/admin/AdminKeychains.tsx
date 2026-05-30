@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Plus, 
   Key, 
@@ -12,6 +12,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import axiosInstance from '../../api/axiosInstance';
+import { toast } from '../../store/useToastStore';
 
 interface Keychain {
   id: string;
@@ -19,6 +20,15 @@ interface Keychain {
   status: string;
   createdAt: string;
   activatedAt?: string;
+  coupleId?: string;
+  coupleName?: string;
+  coupleSlug?: string;
+  userId?: string;
+  userDisplayName?: string;
+  userGender?: string;
+  userDateOfBirth?: string;
+  userBio?: string;
+  nfcPassword?: string;
 }
 
 const AdminKeychains = () => {
@@ -27,6 +37,7 @@ const AdminKeychains = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [count, setCount] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedKeychainId, setExpandedKeychainId] = useState<string | null>(null);
 
   const fetchKeychains = async () => {
     setIsLoading(true);
@@ -49,11 +60,11 @@ const AdminKeychains = () => {
     try {
       const res = await axiosInstance.post('/admin/keychains/bulk', { count });
       if (res.data.success) {
-        alert(`Đã tạo thành công ${count} mã định danh mới!`);
+        toast.success(`Đã tạo thành công ${count} mã định danh mới!`);
         fetchKeychains();
       }
     } catch (err) {
-      alert('Lỗi khi tạo mã định danh.');
+      toast.error('Lỗi khi tạo mã định danh.');
     } finally {
       setIsGenerating(false);
     }
@@ -61,7 +72,7 @@ const AdminKeychains = () => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/activate/${text}`);
-    alert('Đã sao chép link kích hoạt!');
+    toast.success('Đã sao chép link kích hoạt!');
   };
 
   const filteredKeychains = keychains.filter(k => 
@@ -134,42 +145,125 @@ const AdminKeychains = () => {
                 ))
               ) : filteredKeychains.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center text-zinc-500">Không tìm thấy mã nào.</td>
+                  <td colSpan={5} className="px-6 py-20 text-center text-zinc-500 font-bold">Không tìm thấy móc khóa nào.</td>
                 </tr>
               ) : filteredKeychains.map((k) => (
-                <tr key={k.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
-                        <Key className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                <React.Fragment key={k.id}>
+                  <tr 
+                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors group cursor-pointer"
+                    onClick={() => setExpandedKeychainId(expandedKeychainId === k.id ? null : k.id)}
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                          <Key className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                        </div>
+                        <span className="font-mono font-bold text-sm">{k.keyId}</span>
                       </div>
-                      <span className="font-mono font-bold text-sm">{k.keyId}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={k.status} />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-zinc-500">
-                    {new Date(k.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-zinc-500">
-                    {k.activatedAt ? new Date(k.activatedAt).toLocaleString() : '—'}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => copyToClipboard(k.keyId)}
-                        className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400"
-                        title="Copy Activation Link"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={k.status} />
+                    </td>
+                    <td className="px-6 py-4 text-sm text-zinc-500">
+                      {new Date(k.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-zinc-500">
+                      {k.activatedAt ? new Date(k.activatedAt).toLocaleString() : '—'}
+                    </td>
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => copyToClipboard(k.keyId)}
+                          className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400"
+                          title="Copy Activation Link"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => setExpandedKeychainId(expandedKeychainId === k.id ? null : k.id)}
+                          className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {expandedKeychainId === k.id && (
+                    <tr className="bg-zinc-50/50 dark:bg-zinc-800/10">
+                      <td colSpan={5} className="px-8 py-6 border-t border-b border-zinc-150 dark:border-zinc-800">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                          {/* NFC Owner Details Card */}
+                          <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-150 dark:border-zinc-800/60 space-y-4 shadow-sm">
+                            <h4 className="font-black text-sm text-primary flex items-center gap-1.5 border-b border-zinc-100 dark:border-zinc-800/50 pb-2">
+                              👤 Người Sở Hữu NFC Shadow User
+                            </h4>
+                            {k.userId ? (
+                              <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Họ tên</span>
+                                    <span className="font-bold text-zinc-800 dark:text-zinc-200">{k.userDisplayName}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Giới tính</span>
+                                    <span className="font-bold text-zinc-800 dark:text-zinc-200">{k.userGender || 'Chưa đặt'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Ngày sinh</span>
+                                    <span className="font-bold text-zinc-800 dark:text-zinc-200">{k.userDateOfBirth || 'Chưa đặt'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">PIN Khóa NFC</span>
+                                    <span className="font-mono font-black text-primary tracking-widest">{k.nfcPassword || 'Không khóa (Trống)'}</span>
+                                  </div>
+                                </div>
+                                <div className="text-xs pt-1">
+                                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Tiểu sử (Bio)</span>
+                                  <p className="italic text-zinc-500 dark:text-zinc-400 mt-0.5">"{k.userBio || 'Không có tiểu sử.'}"</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-zinc-400 font-bold py-4 text-center">Chưa có thông tin shadow user (thiết bị chưa kích hoạt).</p>
+                            )}
+                          </div>
+
+                          {/* Couple Space details Card */}
+                          <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-150 dark:border-zinc-800/60 space-y-4 shadow-sm">
+                            <h4 className="font-black text-sm text-pink-500 flex items-center gap-1.5 border-b border-zinc-100 dark:border-zinc-800/50 pb-2">
+                              💖 Không Gian Cặp Đôi (Couple Space)
+                            </h4>
+                            {k.coupleId ? (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Tên cặp đôi</span>
+                                    <span className="font-bold text-zinc-800 dark:text-zinc-200">{k.coupleName}</span>
+                                  </div>
+                                  <div>
+                                     <span className="text-[10px] uppercase font-bold text-muted-foreground block">Couple ID</span>
+                                     <span className="font-mono font-bold text-zinc-850 dark:text-zinc-250 block truncate">{k.coupleId}</span>
+                                  </div>
+                                </div>
+                                <div className="pt-2">
+                                  <a 
+                                    href={`/couple/${k.coupleId}`} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-pink-50 text-pink-600 dark:bg-pink-950/20 dark:text-pink-400 rounded-xl text-xs font-black hover:bg-pink-100 transition-colors"
+                                  >
+                                    Ghé thăm không gian công khai <ExternalLink className="w-3.5 h-3.5" />
+                                  </a>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-zinc-400 font-bold py-4 text-center">Móc khóa này chưa được ghép đôi.</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

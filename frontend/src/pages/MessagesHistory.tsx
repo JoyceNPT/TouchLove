@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, 
-  Sparkles, 
   Calendar, 
   Bookmark, 
   BookmarkCheck,
@@ -20,7 +19,7 @@ interface DailyMessage {
 }
 
 const MessagesHistory = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { coupleId } = useParams<{ coupleId: string }>();
   const [messages, setMessages] = useState<DailyMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,13 +27,8 @@ const MessagesHistory = () => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        // First get couple info to get ID
-        const coupleRes = await axiosInstance.get(`/couples/${slug}`);
-        if (coupleRes.data.success) {
-          const coupleId = coupleRes.data.data.id;
-          const res = await axiosInstance.get(`/couples/${coupleId}/messages?days=90`);
-          if (res.data.success) setMessages(res.data.data);
-        }
+        const res = await axiosInstance.get(`/couples/${coupleId}/messages?days=90`);
+        if (res.data.success) setMessages(res.data.data);
       } catch (err) {
         console.error('Failed to fetch messages history', err);
       } finally {
@@ -43,7 +37,7 @@ const MessagesHistory = () => {
     };
 
     fetchHistory();
-  }, [slug]);
+  }, [coupleId]);
 
   const toggleBookmark = async (msgId: string) => {
     try {
@@ -65,7 +59,7 @@ const MessagesHistory = () => {
       {/* Header */}
       <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-30">
         <div className="container mx-auto px-4 h-16 flex items-center gap-4">
-          <Link to={`/c/${slug}`} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
+          <Link to={`/couple/${coupleId}`} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6" />
           </Link>
           <h1 className="text-xl font-bold">Lịch sử thông điệp</h1>
@@ -105,7 +99,7 @@ const MessagesHistory = () => {
               className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] shadow-sm border border-zinc-200 dark:border-zinc-800 relative group overflow-hidden"
             >
               <div className="absolute top-0 right-0 p-6 opacity-5">
-                <Sparkles className="w-12 h-12 text-primary" />
+                <MessageSquare className="w-12 h-12 text-primary" />
               </div>
 
               <div className="flex items-center justify-between mb-4">

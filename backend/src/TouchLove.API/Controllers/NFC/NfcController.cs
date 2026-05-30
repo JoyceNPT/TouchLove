@@ -24,9 +24,31 @@ public class NfcController : ControllerBase
     [HttpGet("{keyId}")]
     public async Task<IActionResult> RedirectNfc(string keyId, CancellationToken ct)
     {
-        var loginResult = await _authService.LoginByNfcAsync(keyId, ct);
+        var keychain = await _db.Keychains
+            .Include(k => k.Couple)
+            .Include(k => k.User)
+            .FirstOrDefaultAsync(k => k.KeyId == keyId, ct);
 
         var frontendUrl = _config["Frontend:Url"] ?? "http://localhost:3000";
+
+        if (keychain == null)
+        {
+            return Redirect($"{frontendUrl}/?error=invalid_nfc");
+        }
+
+        // If the keychain is brand new and not activated yet, redirect to setup PIN
+        if (keychain.UserId == null)
+        {
+            return Redirect($"{frontendUrl}/nfc-setup-pin/{keyId}");
+        }
+
+        // If the user has configured an NfcPassword, they must unlock it first
+        if (keychain.User != null && !string.IsNullOrEmpty(keychain.User.NfcPassword))
+        {
+            return Redirect($"{frontendUrl}/nfc-unlock/{keyId}");
+        }
+
+        var loginResult = await _authService.LoginByNfcAsync(keyId, ct);
 
         if (!loginResult.Success || loginResult.Data == null)
         {
@@ -42,18 +64,12 @@ public class NfcController : ControllerBase
             Expires = DateTimeOffset.UtcNow.AddDays(30)
         });
 
-        // We also need to provide the access token to the frontend. 
-        // We'll pass it as a temp query param so the frontend can store it in zustand.
         var accessToken = loginResult.Data.AccessToken;
-
-        var keychain = await _db.Keychains
-            .Include(k => k.Couple)
-            .FirstOrDefaultAsync(k => k.KeyId == keyId, ct);
 
         // Log the scan
         _db.NfcScanLogs.Add(new NfcScanLog
         {
-            KeychainId = keychain!.Id,
+            KeychainId = keychain.Id,
             CoupleId = keychain.CoupleId,
             ScannedAt = DateTime.UtcNow,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -62,7 +78,7 @@ public class NfcController : ControllerBase
 
         await _db.SaveChangesAsync(ct);
 
-        var redirectTarget = keychain.CoupleId == null ? "/profile" : $"/c/{keychain.Couple!.CoupleSlug}";
+        var redirectTarget = keychain.CoupleId == null ? "/nfc-profile" : $"/couple/{keychain.CoupleId}";
         
         return Redirect($"{frontendUrl}{redirectTarget}?token={accessToken}");
     }

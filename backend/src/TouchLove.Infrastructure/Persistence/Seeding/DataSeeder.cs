@@ -16,6 +16,19 @@ public static class DataSeeder
     private static readonly Guid Keychain2Id = new("00000000-0000-0000-0001-000000000002");
     private static readonly Guid CoupleId = new("00000000-0000-0000-0002-000000000001");
 
+    // 4 NFC test data GUIDs
+    private static readonly Guid NfcMaleUnpairedUserId = new("00000000-0000-0000-0004-000000000001");
+    private static readonly Guid NfcFemaleUnpairedUserId = new("00000000-0000-0000-0004-000000000002");
+    private static readonly Guid NfcPartnerAUserId = new("00000000-0000-0000-0004-000000000003");
+    private static readonly Guid NfcPartnerBUserId = new("00000000-0000-0000-0004-000000000004");
+
+    private static readonly Guid KeychainMaleUnpairedId = new("00000000-0000-0000-0005-000000000001");
+    private static readonly Guid KeychainFemaleUnpairedId = new("00000000-0000-0000-0005-000000000002");
+    private static readonly Guid KeychainPartnerAId = new("00000000-0000-0000-0005-000000000003");
+    private static readonly Guid KeychainPartnerBId = new("00000000-0000-0000-0005-000000000004");
+
+    private static readonly Guid TestCoupleId = new("00000000-0000-0000-0006-000000000001");
+
     public static async Task SeedAsync(AppDbContext context, UserManager<User> userManager, RoleManager<IdentityRole<Guid>> roleManager)
     {
         // ── Order 1: Roles ──────────────────────────────────────────
@@ -81,43 +94,198 @@ public static class DataSeeder
             context.UserSettings.Add(new UserSetting { UserId = User2Id });
         }
 
+        // ── Seed 4 NFC users ─────────────────────────────────────────
+        if (await userManager.FindByIdAsync(NfcMaleUnpairedUserId.ToString()) == null)
+        {
+            var user = new User
+            {
+                Id = NfcMaleUnpairedUserId,
+                UserName = "nfc_key-male-unpaired",
+                Email = "nfc_male@touchlove.local",
+                DisplayName = "Nguyễn Quang Minh",
+                UserType = UserType.NFC,
+                Gender = "Nam",
+                DateOfBirth = new DateOnly(2002, 5, 15),
+                Bio = "Yêu thích nhiếp ảnh và mong muốn tìm kiếm một nửa dịu dàng.",
+                NfcPassword = "123456",
+                IsEmailVerified = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await userManager.CreateAsync(user, "Nfc@123456");
+            await userManager.AddToRoleAsync(user, Constants.Roles.User);
+            context.UserSettings.Add(new UserSetting { UserId = NfcMaleUnpairedUserId });
+        }
+
+        if (await userManager.FindByIdAsync(NfcFemaleUnpairedUserId.ToString()) == null)
+        {
+            var user = new User
+            {
+                Id = NfcFemaleUnpairedUserId,
+                UserName = "nfc_key-female-unpaired",
+                Email = "nfc_female@touchlove.local",
+                DisplayName = "Trần Quỳnh Hoa",
+                UserType = UserType.NFC,
+                Gender = "Nữ",
+                DateOfBirth = new DateOnly(2003, 9, 20),
+                Bio = "Đam mê du lịch và làm đồ len handmade. Hãy chạm nhẹ kết nối nhé!",
+                NfcPassword = "123456",
+                IsEmailVerified = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await userManager.CreateAsync(user, "Nfc@123456");
+            await userManager.AddToRoleAsync(user, Constants.Roles.User);
+            context.UserSettings.Add(new UserSetting { UserId = NfcFemaleUnpairedUserId });
+        }
+
+        if (await userManager.FindByIdAsync(NfcPartnerAUserId.ToString()) == null)
+        {
+            var user = new User
+            {
+                Id = NfcPartnerAUserId,
+                UserName = "nfc_key-partner-a",
+                Email = "nfc_partnerA@touchlove.local",
+                DisplayName = "Quốc Tuấn",
+                UserType = UserType.NFC,
+                Gender = "Nam",
+                DateOfBirth = new DateOnly(2000, 1, 1),
+                Bio = "Cung Bạch Dương điển hình, yêu thích khám phá công nghệ.",
+                NfcPassword = "888888",
+                IsEmailVerified = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await userManager.CreateAsync(user, "Nfc@123456");
+            await userManager.AddToRoleAsync(user, Constants.Roles.User);
+            context.UserSettings.Add(new UserSetting { UserId = NfcPartnerAUserId });
+        }
+
+        if (await userManager.FindByIdAsync(NfcPartnerBUserId.ToString()) == null)
+        {
+            var user = new User
+            {
+                Id = NfcPartnerBUserId,
+                UserName = "nfc_key-partner-b",
+                Email = "nfc_partnerB@touchlove.local",
+                DisplayName = "Phương Thảo",
+                UserType = UserType.NFC,
+                Gender = "Nữ",
+                DateOfBirth = new DateOnly(2001, 10, 10),
+                Bio = "Thích đọc sách, nghe nhạc nhẹ và làm vườn.",
+                NfcPassword = "888888",
+                IsEmailVerified = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await userManager.CreateAsync(user, "Nfc@123456");
+            await userManager.AddToRoleAsync(user, Constants.Roles.User);
+            context.UserSettings.Add(new UserSetting { UserId = NfcPartnerBUserId });
+        }
+
         await context.SaveChangesAsync();
 
-        // ── Order 4: Keychains & Couple ──────────────────────────────
+        // ── Order 4: Keychains ──────────────────────────────
         if (!await context.Keychains.IgnoreQueryFilters().AnyAsync(k => k.Id == Keychain1Id))
         {
-            context.Keychains.AddRange(
-                new Keychain
-                {
-                    Id = Keychain1Id,
-                    KeyId = "key-aaa-001",
-                    UserId = User1Id,
-                    CoupleId = null, // Set later to break circular dependency
-                    Status = KeychainStatus.Paired,
-                    ActivatedAt = new DateTime(2024, 2, 14, 0, 0, 0, DateTimeKind.Utc),
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Keychain
-                {
-                    Id = Keychain2Id,
-                    KeyId = "key-bbb-002",
-                    UserId = User2Id,
-                    CoupleId = null, // Set later to break circular dependency
-                    Status = KeychainStatus.Paired,
-                    ActivatedAt = new DateTime(2024, 2, 14, 0, 0, 0, DateTimeKind.Utc),
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                },
-                new Keychain
-                {
-                    KeyId = "new-chip-123",
-                    Status = KeychainStatus.Available,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                }
-            );
+            context.Keychains.Add(new Keychain
+            {
+                Id = Keychain1Id,
+                KeyId = "key-aaa-001",
+                UserId = User1Id,
+                Status = KeychainStatus.Paired,
+                ActivatedAt = new DateTime(2024, 2, 14, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
         }
+
+        if (!await context.Keychains.IgnoreQueryFilters().AnyAsync(k => k.Id == Keychain2Id))
+        {
+            context.Keychains.Add(new Keychain
+            {
+                Id = Keychain2Id,
+                KeyId = "key-bbb-002",
+                UserId = User2Id,
+                Status = KeychainStatus.Paired,
+                ActivatedAt = new DateTime(2024, 2, 14, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Keychains.IgnoreQueryFilters().AnyAsync(k => k.KeyId == "new-chip-123"))
+        {
+            context.Keychains.Add(new Keychain
+            {
+                KeyId = "new-chip-123",
+                Status = KeychainStatus.Available,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Keychains.IgnoreQueryFilters().AnyAsync(k => k.Id == KeychainMaleUnpairedId))
+        {
+            context.Keychains.Add(new Keychain
+            {
+                Id = KeychainMaleUnpairedId,
+                KeyId = "key-male-unpaired",
+                UserId = NfcMaleUnpairedUserId,
+                Status = KeychainStatus.Activated,
+                ActivatedAt = DateTime.UtcNow.AddDays(-10),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Keychains.IgnoreQueryFilters().AnyAsync(k => k.Id == KeychainFemaleUnpairedId))
+        {
+            context.Keychains.Add(new Keychain
+            {
+                Id = KeychainFemaleUnpairedId,
+                KeyId = "key-female-unpaired",
+                UserId = NfcFemaleUnpairedUserId,
+                Status = KeychainStatus.Activated,
+                ActivatedAt = DateTime.UtcNow.AddDays(-8),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Keychains.IgnoreQueryFilters().AnyAsync(k => k.Id == KeychainPartnerAId))
+        {
+            context.Keychains.Add(new Keychain
+            {
+                Id = KeychainPartnerAId,
+                KeyId = "key-partner-a",
+                UserId = NfcPartnerAUserId,
+                Status = KeychainStatus.Paired,
+                ActivatedAt = DateTime.UtcNow.AddDays(-30),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Keychains.IgnoreQueryFilters().AnyAsync(k => k.Id == KeychainPartnerBId))
+        {
+            context.Keychains.Add(new Keychain
+            {
+                Id = KeychainPartnerBId,
+                KeyId = "key-partner-b",
+                UserId = NfcPartnerBUserId,
+                Status = KeychainStatus.Paired,
+                ActivatedAt = DateTime.UtcNow.AddDays(-30),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        await context.SaveChangesAsync();
 
         if (!await context.Couples.IgnoreQueryFilters().AnyAsync(c => c.Id == CoupleId))
         {
@@ -129,9 +297,34 @@ public static class DataSeeder
                 CoupleSlug = "an-va-binh",
                 CoupleName = "An & Bình",
                 StartDate = new DateOnly(2024, 2, 14),
+                IsStartDateConfirmed = true,
                 Description = "Tình yêu bắt đầu từ mùa xuân năm 2024 💕",
                 NfcScanCount = 42,
                 IsActive = true,
+                PairedAt = new DateTime(2024, 2, 14, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (!await context.Couples.IgnoreQueryFilters().AnyAsync(c => c.Id == TestCoupleId))
+        {
+            context.Couples.Add(new Couple
+            {
+                Id = TestCoupleId,
+                KeychainAId = KeychainPartnerAId,
+                KeychainBId = KeychainPartnerBId,
+                CoupleSlug = "tuan-thao",
+                CoupleName = "Quốc Tuấn & Phương Thảo",
+                StartDate = new DateOnly(2024, 2, 14),
+                IsStartDateConfirmed = true,
+                Description = "Chặng đường yêu thương ngọt ngào 🌹",
+                NfcScanCount = 100,
+                IsActive = true,
+                IsPublic = true,
+                IsAlbumPublic = true,
+                IsAnniversariesPublic = true,
+                IsAchievementsPublic = true,
                 PairedAt = new DateTime(2024, 2, 14, 0, 0, 0, DateTimeKind.Utc),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -145,6 +338,11 @@ public static class DataSeeder
         var k2 = await context.Keychains.FindAsync(Keychain2Id);
         if (k1 != null) k1.CoupleId = CoupleId;
         if (k2 != null) k2.CoupleId = CoupleId;
+
+        var k3 = await context.Keychains.FindAsync(KeychainPartnerAId);
+        var k4 = await context.Keychains.FindAsync(KeychainPartnerBId);
+        if (k3 != null) k3.CoupleId = TestCoupleId;
+        if (k4 != null) k4.CoupleId = TestCoupleId;
 
         await context.SaveChangesAsync();
 

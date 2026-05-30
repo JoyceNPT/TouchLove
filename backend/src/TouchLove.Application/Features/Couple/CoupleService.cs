@@ -20,9 +20,9 @@ public class CoupleService
     }
 
     // ─── Public: Get Couple Page ──────────────────────────────────────
-    public async Task<ApiResponse<CouplePageDto>> GetCouplePageAsync(string slug, CancellationToken ct = default)
+    public async Task<ApiResponse<CouplePageDto>> GetCouplePageAsync(Guid coupleId, CancellationToken ct = default)
     {
-        var cacheKey = $"couple:{slug}";
+        var cacheKey = $"couple:{coupleId}";
         var cached = await _cache.GetAsync<CouplePageDto>(cacheKey, ct);
         if (cached != null)
             return ApiResponse<CouplePageDto>.Ok(cached);
@@ -30,18 +30,44 @@ public class CoupleService
         var couple = await _db.Couples
             .Include(c => c.KeychainA).ThenInclude(k => k!.User)
             .Include(c => c.KeychainB).ThenInclude(k => k!.User)
-            .FirstOrDefaultAsync(c => c.CoupleSlug == slug && c.IsActive, ct);
+            .FirstOrDefaultAsync(c => c.Id == coupleId && c.IsActive, ct);
 
         if (couple == null)
             return ApiResponse<CouplePageDto>.Fail("Couple page not found.");
 
-        var recentMemories = await _db.Memories
+        var memoriesList = await _db.Memories
+            .Include(m => m.UploadedByUser)
             .Where(m => m.CoupleId == couple.Id)
             .OrderBy(m => m.SortOrder)
             .ThenByDescending(m => m.CreatedAt)
             .Take(12)
-            .Select(m => new MemoryPreviewDto(m.Id, _storage.GetPublicUrl(m.StoragePath), m.Caption, m.SortOrder))
             .ToListAsync(ct);
+
+        var recentMemories = memoriesList.Select(m => {
+            List<string> additionalUrls = null;
+            if (!string.IsNullOrEmpty(m.AdditionalMediaJson))
+            {
+                try
+                {
+                    var mediaItems = System.Text.Json.JsonSerializer.Deserialize<List<MemoryMediaItem>>(m.AdditionalMediaJson);
+                    if (mediaItems != null)
+                    {
+                        additionalUrls = mediaItems.Select(x => _storage.GetPublicUrl(x.StoragePath)).ToList();
+                    }
+                }
+                catch { }
+            }
+
+            return new MemoryPreviewDto(
+                m.Id, 
+                _storage.GetPublicUrl(m.StoragePath), 
+                m.Caption, 
+                m.SortOrder,
+                m.MimeType,
+                m.CreatedAt,
+                m.UploadedByUser != null ? m.UploadedByUser.DisplayName : "Ẩn danh",
+                additionalUrls);
+        }).ToList();
 
         var todayMessage = await _db.DailyMessages
             .Where(m => m.CoupleId == couple.Id && m.MessageDate == DateOnly.FromDateTime(DateTime.UtcNow))
@@ -57,10 +83,19 @@ public class CoupleService
             AvatarAUrl: couple.AvatarAUrl,
             AvatarBUrl: couple.AvatarBUrl,
             NfcScanCount: couple.NfcScanCount,
-            PartnerAName: couple.KeychainA?.User?.DisplayName,
-            PartnerBName: couple.KeychainB?.User?.DisplayName,
+            PartnerAName: couple.KeychainA?.User?.Nickname ?? couple.KeychainA?.User?.DisplayName,
+            PartnerBName: couple.KeychainB?.User?.Nickname ?? couple.KeychainB?.User?.DisplayName,
             TodayMessage: todayMessage ?? "Hãy luôn yêu thương và trân trọng nhau nhé! 💕",
-            RecentMemories: recentMemories
+            IsStartDateConfirmed: couple.IsStartDateConfirmed,
+            ProposedStartDate: couple.ProposedStartDate,
+            ProposedByUserId: couple.ProposedByUserId,
+            RecentMemories: recentMemories,
+            IsPublic: couple.IsPublic,
+            IsAlbumPublic: couple.IsAlbumPublic,
+            IsAnniversariesPublic: couple.IsAnniversariesPublic,
+            IsAchievementsPublic: couple.IsAchievementsPublic,
+            PartnerAUserId: couple.KeychainA?.UserId,
+            PartnerBUserId: couple.KeychainB?.UserId
         );
 
         await _cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(Constants.Cache.CouplePageMinutes), ct);
@@ -218,7 +253,7 @@ public class CoupleService
         await _db.SaveChangesAsync();
         await _cache.RemoveAsync($"couple:{couple.CoupleSlug}");
 
-        return new NfcRedirectResult(NfcRedirectType.CouplePage, couple.CoupleSlug);
+        return new NfcRedirectResult(NfcRedirectType.CouplePage, couple.Id.ToString());
     }
 
     private async Task<Domain.Entities.Couple?> GetCoupleIfPartnerAsync(Guid coupleId, Guid userId, CancellationToken ct)
@@ -232,6 +267,89 @@ public class CoupleService
         if (couple.KeychainA?.UserId != userId && couple.KeychainB?.UserId != userId) return null;
         return couple;
     }
+
+    public async Task<ApiResponse<string>> ProposeStartDateAsync(Guid coupleId, Guid userId, DateOnly proposedDate, CancellationToken ct = default)
+    {
+        var couple = await GetCoupleIfPartnerAsync(coupleId, userId, ct);
+        if (couple == null) return ApiResponse<string>.Fail("Couple not found or access denied.");
+
+        couple.ProposedStartDate = proposedDate;
+        couple.ProposedByUserId = userId;
+        couple.IsStartDateConfirmed = false;
+
+        await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+
+        return ApiResponse<string>.Ok("Đề xuất ngày yêu thành công. Chờ đối phương xác nhận! 💕");
+    }
+
+    public async Task<ApiResponse<string>> ConfirmStartDateAsync(Guid coupleId, Guid userId, CancellationToken ct = default)
+    {
+        var couple = await GetCoupleIfPartnerAsync(coupleId, userId, ct);
+        if (couple == null) return ApiResponse<string>.Fail("Couple not found or access denied.");
+
+        if (!couple.ProposedStartDate.HasValue)
+            return ApiResponse<string>.Fail("Không có ngày đề xuất nào cần xác nhận.");
+
+        if (couple.ProposedByUserId == userId)
+            return ApiResponse<string>.Fail("Bạn không thể tự xác nhận đề xuất của chính mình.");
+
+        couple.StartDate = couple.ProposedStartDate.Value;
+        couple.IsStartDateConfirmed = true;
+        couple.ProposedStartDate = null;
+        couple.ProposedByUserId = null;
+
+        await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+
+        return ApiResponse<string>.Ok("Xác nhận ngày yêu thành công! Bộ đếm đã chính thức kích hoạt. 💕");
+    }
+
+    public async Task<ApiResponse<string>> RejectStartDateAsync(Guid coupleId, Guid userId, CancellationToken ct = default)
+    {
+        var couple = await GetCoupleIfPartnerAsync(coupleId, userId, ct);
+        if (couple == null) return ApiResponse<string>.Fail("Couple not found or access denied.");
+
+        if (!couple.ProposedStartDate.HasValue)
+            return ApiResponse<string>.Fail("Không có ngày đề xuất nào để từ chối.");
+
+        if (couple.ProposedByUserId == userId)
+            return ApiResponse<string>.Fail("Bạn không thể từ chối đề xuất của chính mình.");
+
+        couple.ProposedStartDate = null;
+        couple.ProposedByUserId = null;
+        couple.IsStartDateConfirmed = false;
+
+        await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+
+        return ApiResponse<string>.Ok("Đã từ chối ngày yêu đề xuất.");
+    }
+
+    public async Task<ApiResponse<string>> UpdatePrivacySettingsAsync(Guid coupleId, Guid userId, UpdatePrivacySettingsRequest req, CancellationToken ct = default)
+    {
+        var couple = await _db.Couples
+            .FirstOrDefaultAsync(c => c.Id == coupleId && c.IsActive, ct);
+
+        if (couple == null)
+            return ApiResponse<string>.Fail("Couple page not found.");
+
+        var isPartnerA = await _db.Keychains.AnyAsync(k => k.CoupleId == coupleId && k.UserId == userId && k.Id == couple.KeychainAId, ct);
+        var isPartnerB = await _db.Keychains.AnyAsync(k => k.CoupleId == coupleId && k.UserId == userId && k.Id == couple.KeychainBId, ct);
+
+        if (!isPartnerA && !isPartnerB)
+            return ApiResponse<string>.Fail("Bạn không có quyền thay đổi thiết lập của cặp đôi này.");
+
+        couple.IsPublic = req.IsPublic;
+        couple.IsAlbumPublic = req.IsAlbumPublic;
+        couple.IsAnniversariesPublic = req.IsAnniversariesPublic;
+        couple.IsAchievementsPublic = req.IsAchievementsPublic;
+
+        await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync($"couple:{couple.CoupleSlug}", ct);
+
+        return ApiResponse<string>.Ok("Cập nhật thiết lập quyền riêng tư thành công!");
+    }
 }
 
 // ── DTOs ─────────────────────────────────────────────────────────────
@@ -240,9 +358,14 @@ public record CouplePageDto(
     string? Description, string? AvatarAUrl, string? AvatarBUrl,
     int NfcScanCount, string? PartnerAName, string? PartnerBName,
     string TodayMessage,
-    List<MemoryPreviewDto> RecentMemories);
+    bool IsStartDateConfirmed, DateOnly? ProposedStartDate, Guid? ProposedByUserId,
+    List<MemoryPreviewDto> RecentMemories,
+    bool IsPublic, bool IsAlbumPublic, bool IsAnniversariesPublic, bool IsAchievementsPublic,
+    Guid? PartnerAUserId, Guid? PartnerBUserId);
 
-public record MemoryPreviewDto(Guid Id, string Url, string? Caption, int SortOrder);
+public record UpdatePrivacySettingsRequest(bool IsPublic, bool IsAlbumPublic, bool IsAnniversariesPublic, bool IsAchievementsPublic);
+
+public record MemoryPreviewDto(Guid Id, string Url, string? Caption, int SortOrder, string MimeType, DateTime CreatedAt, string? UploadedBy, List<string>? AdditionalUrls = null);
 
 public record UpdateCoupleRequest(string? CoupleName, string? Description, DateOnly? StartDate, string? CoupleSlug);
 

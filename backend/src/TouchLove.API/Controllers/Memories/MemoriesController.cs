@@ -18,18 +18,18 @@ public class MemoriesController : ControllerBase
         _albumService = albumService;
     }
 
-    [HttpGet("{coupleSlug}")]
-    public async Task<IActionResult> GetMemories(string coupleSlug, [FromQuery] int page = 1, [FromQuery] int size = 20, CancellationToken ct = default)
+    [HttpGet("{coupleId:guid}")]
+    public async Task<IActionResult> GetMemories(Guid coupleId, [FromQuery] int page = 1, [FromQuery] int size = 20, CancellationToken ct = default)
     {
-        var result = await _albumService.GetMemoriesAsync(coupleSlug, page, size, ct);
+        var result = await _albumService.GetMemoriesAsync(coupleId, page, size, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    [HttpPost("{coupleId}")]
-    public async Task<IActionResult> UploadMemory(Guid coupleId, [FromForm] IFormFile file, [FromForm] string? caption, CancellationToken ct = default)
+    [HttpPost("{coupleId:guid}")]
+    public async Task<IActionResult> UploadMemory(Guid coupleId, [FromForm] List<IFormFile> files, [FromForm] string? caption, CancellationToken ct = default)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var result = await _albumService.UploadMemoryAsync(coupleId, userId, file, caption, ct);
+        var result = await _albumService.UploadMemoryAsync(coupleId, userId, files, caption, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 

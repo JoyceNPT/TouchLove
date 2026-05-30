@@ -5,6 +5,7 @@ import { axiosInstance } from '../api/axiosInstance';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/authStore';
 import { motion } from 'framer-motion';
+import { LoginRequiredModal } from '../components/shared/LoginRequiredModal';
 
 interface Product {
   id: string;
@@ -26,6 +27,7 @@ const ProductDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -47,8 +49,7 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!isAuthenticated) {
-      alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
-      navigate('/login');
+      setIsLoginModalOpen(true);
       return;
     }
     if (product) {
@@ -59,7 +60,7 @@ const ProductDetail = () => {
         imageUrl: JSON.parse(product.imageUrls || '[]')[0] || '',
         quantity: quantity
       });
-      alert('Đã thêm vào giỏ hàng!');
+      window.dispatchEvent(new CustomEvent('animate-cart'));
     }
   };
 
@@ -176,6 +177,11 @@ const ProductDetail = () => {
           </div>
         </div>
       </div>
+      <LoginRequiredModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onConfirm={() => navigate('/login')}
+      />
     </div>
   );
 };

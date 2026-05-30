@@ -23,9 +23,9 @@ public class MessageService
     }
 
     // ─── Today's message (on-demand, cached) ─────────────────────────
-    public async Task<ApiResponse<MessageDto>> GetTodayMessageAsync(string coupleSlug, CancellationToken ct = default)
+    public async Task<ApiResponse<MessageDto>> GetTodayMessageAsync(Guid coupleId, CancellationToken ct = default)
     {
-        var couple = await _db.Couples.FirstOrDefaultAsync(c => c.CoupleSlug == coupleSlug && c.IsActive, ct);
+        var couple = await _db.Couples.FirstOrDefaultAsync(c => c.Id == coupleId && c.IsActive, ct);
         if (couple == null) return ApiResponse<MessageDto>.Fail("Couple not found.");
 
         var cacheKey = $"msg-today:{couple.Id}";

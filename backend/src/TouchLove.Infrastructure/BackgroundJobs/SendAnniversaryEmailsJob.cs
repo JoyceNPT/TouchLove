@@ -21,6 +21,7 @@ public class SendAnniversaryEmailsJob
     [AutomaticRetry(Attempts = 2)]
     public async Task ExecuteAsync()
     {
+        // 1. Standard Couple Anniversaries (1 day in advance)
         var tomorrow = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
         var activeCouples = await _db.Couples
             .Include(c => c.KeychainA).ThenInclude(k => k!.User).ThenInclude(u => u!.Setting)
@@ -45,6 +46,31 @@ public class SendAnniversaryEmailsJob
 
             if (partnerB?.Setting?.AnnivNotifEnabled == true && !string.IsNullOrEmpty(partnerB.Email))
                 await _email.SendAnniversaryReminderAsync(partnerB.Email, couple.CoupleName ?? "các bạn", days);
+        }
+
+        // 2. Personal Anniversary Reminders (1 week in advance)
+        var inOneWeek = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
+        var personalReminders = await _db.AnniversaryReminders
+            .Include(r => r.User)
+            .Where(r => r.User != null && !string.IsNullOrEmpty(r.User.Email))
+            .ToListAsync();
+
+        foreach (var r in personalReminders)
+        {
+            bool isMatch = false;
+            if (r.IsRecurring)
+            {
+                isMatch = r.Date.Month == inOneWeek.Month && r.Date.Day == inOneWeek.Day;
+            }
+            else
+            {
+                isMatch = r.Date == inOneWeek;
+            }
+
+            if (isMatch)
+            {
+                await _email.SendPersonalReminderAsync(r.User!.Email!, r.Title, r.Date);
+            }
         }
     }
 }

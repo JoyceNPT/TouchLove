@@ -25,6 +25,12 @@ import CheckoutPage from './pages/CheckoutPage';
 import SecuritySettings from './pages/SecuritySettings';
 import ProductDetail from './pages/ProductDetail';
 import UserOrders from './pages/UserOrders';
+import NfcUnlock from './pages/NfcUnlock';
+import NfcProfile from './pages/NfcProfile';
+import Explore from './pages/Explore';
+import NfcSetupPin from './pages/NfcSetupPin';
+import NfcRedirect from './pages/NfcRedirect';
+import { ToastContainer } from './components/shared/ToastContainer';
 import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
 import axios from 'axios';
@@ -53,8 +59,26 @@ const UserStatusGuard = () => {
   return null;
 };
 
+// Guard for Sales / Shopping routes
+const SalesRouteGuard = ({ children }: { children: React.ReactNode }) => {
+  const { user, isAuthenticated } = useAuthStore();
+  if (isAuthenticated && user && user.userType === 'NFC') {
+    return <Navigate to="/nfc-profile" replace />;
+  }
+  return <>{children}</>;
+};
+
+// Guard for NFC / Explore / Couple routes
+const NfcRouteGuard = ({ children }: { children: React.ReactNode }) => {
+  const { user, isAuthenticated } = useAuthStore();
+  if (isAuthenticated && user && user.userType === 'Sales') {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
+
 function App() {
-  const { isAuthenticated, setToken, setUser, clearAuth } = useAuthStore();
+  const { user, isAuthenticated, setToken, setUser, clearAuth } = useAuthStore();
 
   // 1. Sync check for URL token (login from email/NFC)
   useEffect(() => {
@@ -83,20 +107,23 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, []);
+
   return (
     <HelmetProvider>
       <Router>
         <UserStatusGuard />
+        <ToastContainer />
         <Routes>
           {/* Public Couple Pages */}
           <Route element={<MainLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/c/:slug" element={<CouplePage />} />
-            <Route path="/c/:slug/messages" element={<MessagesHistory />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/products/:slug" element={<ProductDetail />} />
-            <Route path="/my-orders" element={isAuthenticated ? <UserOrders /> : <Navigate to="/login" />} />
+            <Route path="/" element={<SalesRouteGuard><Home /></SalesRouteGuard>} />
+            <Route path="/couple/:coupleId" element={<NfcRouteGuard><CouplePage /></NfcRouteGuard>} />
+            <Route path="/couple/:coupleId/messages" element={<NfcRouteGuard><MessagesHistory /></NfcRouteGuard>} />
+            <Route path="/cart" element={<SalesRouteGuard><CartPage /></SalesRouteGuard>} />
+            <Route path="/checkout" element={<SalesRouteGuard><CheckoutPage /></SalesRouteGuard>} />
+            <Route path="/products/:slug" element={<SalesRouteGuard><ProductDetail /></SalesRouteGuard>} />
+            <Route path="/explore" element={<NfcRouteGuard><Explore /></NfcRouteGuard>} />
+            <Route path="/my-orders" element={isAuthenticated ? (user?.userType === 'Sales' ? <UserOrders /> : <Navigate to="/nfc-profile" />) : <Navigate to="/login" />} />
           </Route>
 
           {/* Auth Pages */}
@@ -108,9 +135,15 @@ function App() {
             <Route path="/verify-email" element={<VerifyEmail />} />
           </Route>
 
+          {/* Standalone full-screen pages */}
+          <Route path="/nfc-unlock/:keyId" element={<NfcUnlock />} />
+          <Route path="/nfc-setup-pin/:keyId" element={<NfcSetupPin />} />
+          <Route path="/nfc/:keyId" element={<NfcRedirect />} />
+
           {/* Protected NFC Flows */}
           <Route element={<MainLayout />}>
-            <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+            <Route path="/profile" element={isAuthenticated ? (user?.userType === 'Sales' ? <Profile /> : <Navigate to="/nfc-profile" />) : <Navigate to="/login" />} />
+            <Route path="/nfc-profile" element={isAuthenticated ? (<NfcRouteGuard><NfcProfile /></NfcRouteGuard>) : <Navigate to="/login" />} />
             <Route path="/profile/security" element={isAuthenticated ? <SecuritySettings /> : <Navigate to="/login" />} />
             <Route 
               path="/activate/:keyId" 

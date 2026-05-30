@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
-import { Heart, Smartphone, Image as ImageIcon, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
+import { Heart, Smartphone, Image as ImageIcon, Star, ArrowRight, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import ProductCard from '../components/home/ProductCard';
 import { axiosInstance } from '../api/axiosInstance';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/authStore';
+import { LoginRequiredModal } from '../components/shared/LoginRequiredModal';
 
 interface Product {
   id: string;
@@ -40,10 +41,11 @@ const Home = () => {
     fetchProducts();
   }, []);
 
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
   const handleAddToCart = (id: string) => {
     if (!isAuthenticated) {
-      alert('Vui lòng đăng nhập để thực hiện chức năng này.');
-      navigate('/login');
+      setIsLoginModalOpen(true);
       return;
     }
     const product = products.find(p => p.id === id);
@@ -56,7 +58,7 @@ const Home = () => {
         imageUrl: images[0],
         quantity: 1
       });
-      alert('Đã thêm vào giỏ hàng!');
+      window.dispatchEvent(new CustomEvent('animate-cart'));
     }
   };
 
@@ -98,12 +100,6 @@ const Home = () => {
               >
                 Bắt đầu hành trình <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link
-                to="/c/demo"
-                className="w-full sm:w-auto px-8 py-4 glass rounded-full text-lg font-bold hover:bg-secondary transition-all"
-              >
-                Xem demo
-              </Link>
             </div>
           </motion.div>
         </div>
@@ -127,7 +123,7 @@ const Home = () => {
               delay={0.1}
             />
             <FeatureCard
-              icon={<Sparkles className="w-8 h-8 text-primary" />}
+              icon={<Star className="w-8 h-8 text-primary" />}
               title="Lời chúc AI mỗi ngày"
               description="Nhận những thông điệp yêu thương được cá nhân hóa bởi AI vào mỗi buổi sáng."
               delay={0.2}
@@ -243,6 +239,11 @@ const Home = () => {
         </div>
       </section>
 
+      <LoginRequiredModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onConfirm={() => navigate('/login')}
+      />
     </div>
   );
 };
