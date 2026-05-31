@@ -105,6 +105,26 @@ const AdminKeychains = () => {
     });
   };
 
+  const handleDelete = async (id: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Xóa thiết bị',
+      message: 'Bạn có chắc chắn muốn XÓA VĨNH VIỄN thiết bị này khỏi hệ thống? Dữ liệu sẽ không thể khôi phục.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await axiosInstance.delete(`/admin/keychains/${id}`);
+          if (res.data.success) {
+            toast.success('Đã xóa thiết bị thành công!');
+            fetchKeychains();
+          }
+        } catch (err: any) {
+          toast.error(err.response?.data?.message || 'Lỗi khi xóa thiết bị.');
+        }
+      }
+    });
+  };
+
   const handleBulkCreate = async () => {
     setIsGenerating(true);
     try {
@@ -228,6 +248,16 @@ const AdminKeychains = () => {
                           title="Copy Activation Link"
                         >
                           <Copy className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(k.id);
+                          }}
+                          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-500 transition-colors"
+                          title="Xóa thiết bị"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => setExpandedKeychainId(expandedKeychainId === k.id ? null : k.id)}

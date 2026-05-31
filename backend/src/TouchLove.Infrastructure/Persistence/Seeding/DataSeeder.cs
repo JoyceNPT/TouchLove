@@ -463,5 +463,24 @@ public static class DataSeeder
         }
 
         await context.SaveChangesAsync();
+
+        // ── Order 9: App Policies ────────────────────────────────────
+        var policies = new List<AppPolicy>
+        {
+            new() { Code = "TERMS", Language = "vi", Content = "# Điều khoản sử dụng\n\nChào mừng bạn đến với TouchLove.\n\n## 1. Giới thiệu\nTouchLove là nền tảng kết nối tình yêu qua NFC.\n\n## 2. Quyền lợi và nghĩa vụ\nBạn đồng ý sử dụng dịch vụ một cách tôn trọng và không vi phạm pháp luật." },
+            new() { Code = "TERMS", Language = "en", Content = "# Terms of Service\n\nWelcome to TouchLove.\n\n## 1. Introduction\nTouchLove is an NFC love connection platform." },
+            new() { Code = "PRIVACY", Language = "vi", Content = "# Chính sách bảo mật\n\nTouchLove cam kết bảo vệ dữ liệu cá nhân của bạn.\n\n## 1. Thu thập dữ liệu\nChúng tôi chỉ thu thập các dữ liệu cần thiết cho việc kết nối cặp đôi.\n\n## 2. Bảo mật\nThông tin của bạn được mã hóa an toàn." },
+            new() { Code = "PRIVACY", Language = "en", Content = "# Privacy Policy\n\nTouchLove is committed to protecting your personal data." },
+        };
+
+        foreach (var policy in policies)
+        {
+            if (!await context.AppPolicies.AnyAsync(p => p.Code == policy.Code && p.Language == policy.Language))
+            {
+                context.AppPolicies.Add(policy);
+            }
+        }
+
+        await context.SaveChangesAsync();
     }
 }

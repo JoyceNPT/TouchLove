@@ -12,6 +12,7 @@ import CouplePage from './pages/CouplePage';
 import ActivateKeychain from './pages/ActivateKeychain';
 import Pairing from './pages/Pairing';
 import Profile from './pages/Profile';
+import ProfileEdit from './pages/ProfileEdit';
 import MessagesHistory from './pages/MessagesHistory';
 import AdminLayout from './layouts/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -19,6 +20,10 @@ import AdminKeychains from './pages/admin/AdminKeychains';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminRevenue from './pages/admin/AdminRevenue';
+import AdminPolicies from './pages/admin/AdminPolicies';
+import { AdminVouchers } from './pages/admin/AdminVouchers';
+import PoliciesPage from './pages/PoliciesPage';
 import AdminRoute from './components/auth/AdminRoute';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
@@ -169,6 +174,7 @@ function App() {
             <Route path="/products/:slug" element={<SalesRouteGuard><ProductDetail /></SalesRouteGuard>} />
             <Route path="/explore" element={<NfcRouteGuard><Explore /></NfcRouteGuard>} />
             <Route path="/my-orders" element={isAuthenticated ? (user?.userType === 'Sales' ? <UserOrders /> : <Navigate to="/nfc-profile" />) : <Navigate to="/login" />} />
+            <Route path="/policies" element={<PoliciesPage />} />
           </Route>
 
           {/* Auth Pages */}
@@ -188,6 +194,7 @@ function App() {
           {/* Protected NFC Flows */}
           <Route element={<MainLayout />}>
             <Route path="/profile" element={isAuthenticated ? (user?.userType === 'Sales' ? <Profile /> : <Navigate to="/nfc-profile" />) : <Navigate to="/login" />} />
+            <Route path="/profile/edit" element={isAuthenticated ? <ProfileEdit /> : <Navigate to="/login" />} />
             <Route path="/nfc-profile" element={<ProtectedNfcProfile />} />
             <Route path="/profile/security" element={isAuthenticated ? <SecuritySettings /> : <Navigate to="/login" />} />
             <Route 
@@ -208,8 +215,9 @@ function App() {
               <Route path="/admin/products" element={<AdminProducts />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
               <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/couples" element={<div>Đang phát triển...</div>} />
-              <Route path="/admin/templates" element={<div>Đang phát triển...</div>} />
+              <Route path="/admin/revenue" element={<AdminRevenue />} />
+              <Route path="/admin/policies" element={<AdminPolicies />} />
+              <Route path="/admin/vouchers" element={<AdminVouchers />} />
             </Route>
           </Route>
 

@@ -118,6 +118,9 @@ try
     builder.Services.AddScoped<MilestoneService>();
     builder.Services.AddScoped<StoreService>();
     builder.Services.AddScoped<AdminStoreService>();
+    builder.Services.AddScoped<TouchLove.Application.Features.Voucher.IVoucherService, TouchLove.Application.Features.Voucher.VoucherService>();
+    builder.Services.AddScoped<TouchLove.Application.Features.Voucher.IVoucherAdminService, TouchLove.Application.Features.Voucher.VoucherAdminService>();
+    builder.Services.AddScoped<TouchLove.Application.Features.Policy.IPolicyService, TouchLove.Application.Features.Policy.PolicyService>();
 
     // ── Infrastructure Services ───────────────────────────────────────
     var storageProvider = builder.Configuration["Storage:Provider"] ?? "Local";

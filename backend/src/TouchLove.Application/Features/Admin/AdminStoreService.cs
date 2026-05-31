@@ -41,7 +41,7 @@ public class AdminStoreService
             .Include(p => p.Supplier)
             .IgnoreQueryFilters() // Show deleted for admin if needed, or just normal
             .Where(p => !p.IsDeleted)
-            .Select(p => new AdminProductDto(p.Id, p.Name, p.Slug, p.Price, p.StockQuantity, p.Supplier != null ? p.Supplier.Name : "N/A", p.IsActive))
+            .Select(p => new AdminProductDto(p.Id, p.Name, p.Slug, p.CostPrice, p.Price, p.StockQuantity, p.Supplier != null ? p.Supplier.Name : "N/A", p.IsActive))
             .ToListAsync(ct);
         return ApiResponse<List<AdminProductDto>>.Ok(data);
     }
@@ -54,6 +54,7 @@ public class AdminStoreService
             Name = req.Name,
             Slug = slug,
             Description = req.Description,
+            CostPrice = req.CostPrice,
             Price = req.Price,
             StockQuantity = req.StockQuantity,
             SupplierId = req.SupplierId,
@@ -73,6 +74,7 @@ public class AdminStoreService
 
         p.Name = req.Name;
         p.Description = req.Description;
+        p.CostPrice = req.CostPrice;
         p.Price = req.Price;
         p.StockQuantity = req.StockQuantity;
         p.SupplierId = req.SupplierId;
@@ -95,7 +97,10 @@ public class AdminStoreService
         // Business Logic: If product has active orders, cannot hard delete.
         // We use soft delete as requested.
         bool hasActiveOrders = await _db.OrderItems
-            .AnyAsync(oi => oi.ProductId == id && oi.Order!.Status != OrderStatus.Completed && oi.Order.Status != OrderStatus.Cancelled, ct);
+            .AnyAsync(oi => oi.ProductId == id && 
+                (oi.Order!.Status == OrderStatus.Pending || 
+                 oi.Order.Status == OrderStatus.Processing || 
+                 oi.Order.Status == OrderStatus.Shipping), ct);
 
         if (hasActiveOrders)
         {
@@ -103,6 +108,7 @@ public class AdminStoreService
         }
 
         p.IsDeleted = true;
+        p.DeletedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         await _cache.RemoveAsync("store:products", ct);
         await _cache.RemoveAsync($"store:product:{p.Slug}", ct);
@@ -138,7 +144,7 @@ public class AdminStoreService
     }
 }
 
-public record CreateProductRequest(string Name, string? Description, decimal Price, int StockQuantity, Guid? SupplierId, string? ImageUrls);
+public record CreateProductRequest(string Name, string? Description, decimal CostPrice, decimal Price, int StockQuantity, Guid? SupplierId, string? ImageUrls);
 public record SupplierDto(Guid Id, string Name, string? Phone, string? Email, string? Address);
-public record AdminProductDto(Guid Id, string Name, string Slug, decimal Price, int StockQuantity, string SupplierName, bool IsActive);
+public record AdminProductDto(Guid Id, string Name, string Slug, decimal CostPrice, decimal Price, int StockQuantity, string SupplierName, bool IsActive);
 public record AdminOrderDto(Guid Id, string OrderNumber, string CustomerName, decimal TotalAmount, OrderStatus Status, PaymentStatus PaymentStatus, DateTime CreatedAt);

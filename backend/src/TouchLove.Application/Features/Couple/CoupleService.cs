@@ -44,7 +44,7 @@ public class CoupleService
             .ToListAsync(ct);
 
         var recentMemories = memoriesList.Select(m => {
-            List<string> additionalUrls = null;
+            List<string>? additionalUrls = null;
             if (!string.IsNullOrEmpty(m.AdditionalMediaJson))
             {
                 try

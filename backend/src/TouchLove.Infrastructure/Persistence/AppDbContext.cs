@@ -27,6 +27,10 @@ public class AppDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>, I
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<AnniversaryReminder> AnniversaryReminders => Set<AnniversaryReminder>();
+    public DbSet<Voucher> Vouchers => Set<Voucher>();
+    public DbSet<VoucherRedemption> VoucherRedemptions => Set<VoucherRedemption>();
+    public DbSet<PendingOrder> PendingOrders => Set<PendingOrder>();
+    public DbSet<AppPolicy> AppPolicies => Set<AppPolicy>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

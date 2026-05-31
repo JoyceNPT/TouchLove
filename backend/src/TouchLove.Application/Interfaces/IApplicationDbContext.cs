@@ -5,6 +5,7 @@ namespace TouchLove.Application.Interfaces;
 
 public interface IApplicationDbContext
 {
+    Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
     DbSet<User> Users { get; }
     DbSet<UserSetting> UserSettings { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
@@ -23,6 +24,10 @@ public interface IApplicationDbContext
     DbSet<Order> Orders { get; }
     DbSet<OrderItem> OrderItems { get; }
     DbSet<AnniversaryReminder> AnniversaryReminders { get; }
+    DbSet<Voucher> Vouchers { get; }
+    DbSet<VoucherRedemption> VoucherRedemptions { get; }
+    DbSet<PendingOrder> PendingOrders { get; }
+    DbSet<AppPolicy> AppPolicies { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

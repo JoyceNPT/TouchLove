@@ -9,7 +9,8 @@ import {
   Heart,
   ChevronRight,
   ShoppingBag,
-  Package
+  Package,
+  Ticket
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
@@ -28,9 +29,10 @@ const AdminLayout = () => {
     { icon: Key, label: 'Móc khóa', path: '/admin/keychains' },
     { icon: Package, label: 'Sản phẩm', path: '/admin/products' },
     { icon: ShoppingBag, label: 'Đơn hàng', path: '/admin/orders' },
+    { icon: Ticket, label: 'Vouchers', path: '/admin/vouchers' },
     { icon: Users, label: 'Người dùng', path: '/admin/users' },
-    { icon: Heart, label: 'Cặp đôi', path: '/admin/couples' },
-    { icon: FileText, label: 'Templates', path: '/admin/templates' },
+    { icon: FileText, label: 'Báo cáo doanh thu', path: '/admin/revenue' },
+    { icon: FileText, label: 'Chính sách & Điều khoản', path: '/admin/policies' },
   ];
 
   return (

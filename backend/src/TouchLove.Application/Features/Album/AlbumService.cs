@@ -30,7 +30,7 @@ public class AlbumService
             .ToListAsync(ct);
 
         var items = memories.Select(m => {
-            List<string> additionalUrls = null;
+            List<string>? additionalUrls = null;
             if (!string.IsNullOrEmpty(m.AdditionalMediaJson))
             {
                 try

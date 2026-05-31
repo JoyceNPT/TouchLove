@@ -33,20 +33,15 @@ public class AdminService
             ActiveCouples: await _db.Couples.CountAsync(c => c.IsActive, ct),
             TotalUsers: await _userManager.Users.CountAsync(ct),
             ActiveUsers: await _userManager.Users.CountAsync(u => u.IsActive, ct),
-            NfcScansToday: await _db.NfcScanLogs.CountAsync(l => l.ScannedAt >= today, ct),
-            NfcScansThisWeek: await _db.NfcScanLogs.CountAsync(l => l.ScannedAt >= weekAgo, ct),
-            NfcScansThisMonth: await _db.NfcScanLogs.CountAsync(l => l.ScannedAt >= today.AddDays(-30), ct),
             TotalMemories: await _db.Memories.IgnoreQueryFilters().CountAsync(ct),
-            TemplatesByStatus: new TemplateStats(
-                Draft: await _db.MessageTemplates.IgnoreQueryFilters().CountAsync(t => t.Status == TemplateStatus.Draft, ct),
-                Published: await _db.MessageTemplates.IgnoreQueryFilters().CountAsync(t => t.Status == TemplateStatus.Published, ct),
-                Archived: await _db.MessageTemplates.IgnoreQueryFilters().CountAsync(t => t.Status == TemplateStatus.Archived, ct)
-            ),
+            TotalOrders: await _db.Orders.CountAsync(o => o.Status >= TouchLove.Domain.Enums.OrderStatus.Confirmed, ct),
+            WeeklyRevenue: await _db.Orders
+                .Where(o => o.Status >= TouchLove.Domain.Enums.OrderStatus.Confirmed && o.CreatedAt >= weekAgo)
+                .SumAsync(o => o.TotalAmount, ct),
             NewCouplesLast7Days: await _db.Couples.IgnoreQueryFilters()
                 .Where(c => c.CreatedAt >= weekAgo)
-                .GroupBy(c => c.CreatedAt.Date)
-                .Select(g => new DailyCount(g.Key, g.Count()))
-                .OrderBy(d => d.Date)
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new NewCoupleDto(c.Id, c.CoupleName ?? "N/A", c.CreatedAt))
                 .ToListAsync(ct)
         );
 
@@ -187,6 +182,17 @@ public class AdminService
         });
     }
 
+    public async Task<ApiResponse<string>> DeleteKeychainAsync(Guid keychainId, CancellationToken ct = default)
+    {
+        var keychain = await _db.Keychains.FindAsync(new object[] { keychainId }, ct);
+        if (keychain == null)
+            return ApiResponse<string>.Fail("Không tìm thấy móc khóa.");
+
+        _db.Keychains.Remove(keychain);
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse<string>.Ok("Xóa móc khóa thành công.");
+    }
+
     // ─── Templates ─────────────────────────────────────────────────────
     public async Task<ApiResponse<TemplateDto>> CreateTemplateAsync(Guid adminId, string content, string language, string? category, CancellationToken ct = default)
     {
@@ -246,10 +252,8 @@ public class AdminService
 
 // ── DTOs ─────────────────────────────────────────────────────────────
 public record AdminStatsDto(int TotalCouples, int ActiveCouples, int TotalUsers, int ActiveUsers,
-    int NfcScansToday, int NfcScansThisWeek, int NfcScansThisMonth, int TotalMemories,
-    TemplateStats TemplatesByStatus, List<DailyCount> NewCouplesLast7Days);
-public record TemplateStats(int Draft, int Published, int Archived);
-public record DailyCount(DateTime Date, int Count);
+    int TotalMemories, int TotalOrders, decimal WeeklyRevenue, List<NewCoupleDto> NewCouplesLast7Days);
+public record NewCoupleDto(Guid Id, string Name, DateTime PairedAt);
 public record AdminUserDto(Guid Id, string DisplayName, string Email, bool IsActive, bool IsEmailVerified, DateTime CreatedAt, string? Gender, DateOnly? DateOfBirth, string? Bio, string UserType);
 public record KeychainSummaryDto(
     Guid Id, string KeyId, KeychainStatus Status, DateTime CreatedAt, DateTime? ActivatedAt,

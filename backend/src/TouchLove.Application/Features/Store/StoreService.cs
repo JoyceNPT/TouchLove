@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TouchLove.Application.Interfaces;
 using TouchLove.Domain.Entities;
 using TouchLove.Domain.Enums;
+using System.Text.Json;
 using TouchLove.Shared;
 
 namespace TouchLove.Application.Features.Store;
@@ -10,11 +11,13 @@ public class StoreService
 {
     private readonly IApplicationDbContext _db;
     private readonly ICacheService _cache;
+    private readonly TouchLove.Application.Features.Voucher.IVoucherService _voucherService;
 
-    public StoreService(IApplicationDbContext db, ICacheService cache)
+    public StoreService(IApplicationDbContext db, ICacheService cache, TouchLove.Application.Features.Voucher.IVoucherService voucherService)
     {
         _db = db;
         _cache = cache;
+        _voucherService = voucherService;
     }
 
     public async Task<ApiResponse<List<ProductDto>>> GetProductsAsync(CancellationToken ct = default)
@@ -130,7 +133,47 @@ public class StoreService
             totalAmount += orderItem.TotalPrice;
         }
 
+        if (!string.IsNullOrWhiteSpace(req.VoucherCode))
+        {
+            var valRes = await _voucherService.ValidateAsync(req.VoucherCode, totalAmount, userId, ct);
+            if (!valRes.Success || !valRes.Data!.IsValid)
+                return ApiResponse<OrderDto>.Fail(valRes.Message ?? valRes.Data?.Message ?? "Voucher không hợp lệ.");
+            
+            totalAmount -= valRes.Data.DiscountAmount;
+            if (totalAmount < 0) totalAmount = 0;
+        }
+
         var orderNumber = $"TL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
+
+        if (req.PaymentMethod?.ToUpper() == "QR")
+        {
+            var payload = JsonSerializer.Serialize(req);
+            var pendingOrder = new PendingOrder
+            {
+                OrderNumber = orderNumber,
+                CustomerId = userId,
+                PayloadJson = payload,
+                TotalAmount = totalAmount,
+                TransactionId = Guid.NewGuid().ToString("N"),
+                ExpiresAt = DateTime.UtcNow.AddMinutes(15)
+            };
+            _db.PendingOrders.Add(pendingOrder);
+            await _db.SaveChangesAsync(ct);
+            
+            // Return orderNumber instead of id, the frontend can poll or wait for webhook
+            return ApiResponse<OrderDto>.Ok(new OrderDto(Guid.Empty, orderNumber, totalAmount, OrderStatus.Pending, PaymentStatus.Unpaid, DateTime.UtcNow));
+        }
+
+        // For COD, subtract stock and create Order directly
+        foreach (var item in orderItems)
+        {
+            var product = await _db.Products.FindAsync(new object[] { item.ProductId }, ct);
+            if (product != null)
+            {
+                product.StockQuantity -= item.Quantity;
+                await _cache.RemoveAsync($"store:product:{product.Slug}", ct);
+            }
+        }
         var order = new Order
         {
             OrderNumber = orderNumber,
@@ -148,11 +191,83 @@ public class StoreService
         await _db.SaveChangesAsync(ct);
         await _cache.RemoveAsync("store:products", ct);
 
+        if (!string.IsNullOrWhiteSpace(req.VoucherCode))
+        {
+            // Note: Since RedeemAsync has its own transaction, it's safer to call it after saving the order, 
+            // but in reality we might want a distributed transaction. Here we'll just call it.
+            var redeemRes = await _voucherService.RedeemAsync(req.VoucherCode, totalAmount + (await _voucherService.ValidateAsync(req.VoucherCode, totalAmount, userId, ct)).Data!.DiscountAmount, userId, order.Id, ct);
+            if (!redeemRes.Success)
+            {
+                // In a real app we might want to cancel the order here if redeem fails.
+            }
+        }
+        await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync("store:products", ct);
+
         return ApiResponse<OrderDto>.Ok(new OrderDto(order.Id, order.OrderNumber, order.TotalAmount, order.Status, order.PaymentStatus, order.CreatedAt));
+    }
+
+    public async Task<ApiResponse<string>> ConfirmPendingOrderAsync(string transactionId, CancellationToken ct = default)
+    {
+        var pending = await _db.PendingOrders
+            .FirstOrDefaultAsync(p => p.TransactionId == transactionId, ct);
+
+        if (pending == null)
+            return ApiResponse<string>.Fail("Transaction không tồn tại hoặc đã được xử lý.");
+
+        if (pending.ExpiresAt < DateTime.UtcNow)
+        {
+            _db.PendingOrders.Remove(pending);
+            await _db.SaveChangesAsync(ct);
+            return ApiResponse<string>.Fail("Giao dịch đã hết hạn.");
+        }
+
+        var req = JsonSerializer.Deserialize<PlaceOrderRequest>(pending.PayloadJson);
+        if (req == null) return ApiResponse<string>.Fail("Dữ liệu lỗi.");
+
+        // Check stock again
+        var orderItems = new List<OrderItem>();
+        foreach (var item in req.Items)
+        {
+            var product = await _db.Products.FindAsync(new object[] { item.ProductId }, ct);
+            if (product == null || product.StockQuantity < item.Quantity)
+                return ApiResponse<string>.Fail($"Sản phẩm không đủ số lượng.");
+                
+            product.StockQuantity -= item.Quantity;
+            orderItems.Add(new OrderItem
+            {
+                ProductId = product.Id,
+                Quantity = item.Quantity,
+                UnitPrice = product.Price
+            });
+        }
+
+        var order = new Order
+        {
+            OrderNumber = pending.OrderNumber,
+            CustomerId = pending.CustomerId,
+            ShippingFullName = req.ShippingFullName,
+            ShippingPhone = req.ShippingPhone,
+            ShippingAddress = req.ShippingAddress,
+            TotalAmount = pending.TotalAmount,
+            PaymentMethod = req.PaymentMethod,
+            Notes = req.Notes,
+            Items = orderItems,
+            Status = OrderStatus.Confirmed,
+            PaymentStatus = PaymentStatus.Paid,
+            TransactionId = transactionId
+        };
+
+        _db.Orders.Add(order);
+        _db.PendingOrders.Remove(pending); // Remove pending
+        await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync("store:products", ct);
+
+        return ApiResponse<string>.Ok("Xác nhận thanh toán và tạo đơn hàng thành công.");
     }
 }
 
 public record ProductDto(Guid Id, string Name, string Slug, string? Description, decimal Price, int StockQuantity, string? ImageUrls);
-public record PlaceOrderRequest(string ShippingFullName, string ShippingPhone, string ShippingAddress, string PaymentMethod, string? Notes, List<CartItemRequest> Items);
+public record PlaceOrderRequest(string ShippingFullName, string ShippingPhone, string ShippingAddress, string PaymentMethod, string? Notes, List<CartItemRequest> Items, string? VoucherCode = null);
 public record CartItemRequest(Guid ProductId, int Quantity);
 public record OrderDto(Guid Id, string OrderNumber, decimal TotalAmount, OrderStatus Status, PaymentStatus PaymentStatus, DateTime CreatedAt);

@@ -57,6 +57,9 @@ public class AdminController : ControllerBase
     [HttpPost("keychains/{keyId}/unpair")]
     public async Task<IActionResult> Unpair(string keyId, CancellationToken ct) => Ok(await _adminService.UnpairCoupleAsync(keyId, ct));
 
+    [HttpDelete("keychains/{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct) => Ok(await _adminService.DeleteKeychainAsync(id, ct));
+
     // ─── Templates ─────────────────────────────────────────────────────
     [HttpGet("templates")]
     public async Task<IActionResult> GetTemplates([FromQuery] string? status, [FromQuery] string? language,

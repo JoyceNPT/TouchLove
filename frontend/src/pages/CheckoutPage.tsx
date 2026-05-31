@@ -16,6 +16,7 @@ const checkoutSchema = z.object({
   shippingAddress: z.string().min(10, 'Địa chỉ cần chi tiết hơn'),
   paymentMethod: z.enum(['QR', 'COD']),
   notes: z.string().optional(),
+  voucherCode: z.string().optional(),
 });
 
 type CheckoutForm = z.infer<typeof checkoutSchema>;
@@ -29,6 +30,10 @@ const CheckoutPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [orderInfo, setOrderInfo] = useState<any>(null);
   const [timer, setTimer] = useState(30);
+  const [voucherCode, setVoucherCode] = useState('');
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm<CheckoutForm>({
     resolver: zodResolver(checkoutSchema),
@@ -55,6 +60,28 @@ const CheckoutPage = () => {
     return () => clearInterval(interval);
   }, [step, timer, items.length, clearCart]);
 
+  const applyVoucher = async () => {
+    if (!voucherCode.trim()) return;
+    setIsApplyingVoucher(true);
+    setVoucherError(null);
+    try {
+      const res = await axiosInstance.get(`/vouchers/validate?code=${voucherCode}&orderValue=${totalPrice()}`);
+      if (res.data.success && res.data.data.isValid) {
+        setDiscountAmount(res.data.data.discountAmount);
+      } else {
+        setVoucherError(res.data.message || 'Voucher không hợp lệ');
+        setDiscountAmount(0);
+      }
+    } catch (err: any) {
+      setVoucherError(err.response?.data?.message || 'Lỗi kiểm tra voucher');
+      setDiscountAmount(0);
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  const finalPrice = Math.max(0, totalPrice() - discountAmount);
+
   const onSubmit = async (data: CheckoutForm) => {
     if (user?.role === 'Admin') {
       setError('Tài khoản Admin không được phép thực hiện đặt hàng. Vui lòng sử dụng tài khoản User.');
@@ -65,7 +92,8 @@ const CheckoutPage = () => {
     try {
       const payload = {
         ...data,
-        items: items.map(i => ({ productId: i.id, quantity: i.quantity }))
+        items: items.map(i => ({ productId: i.id, quantity: i.quantity })),
+        voucherCode: discountAmount > 0 ? voucherCode : undefined
       };
       
       const res = await axiosInstance.post('/store/orders', payload);
@@ -185,6 +213,30 @@ const CheckoutPage = () => {
                 </div>
                 
                 <div className="h-px bg-border" />
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Mã giảm giá"
+                    value={voucherCode}
+                    onChange={(e) => {
+                      setVoucherCode(e.target.value.toUpperCase());
+                      setVoucherError(null);
+                      if (discountAmount > 0) setDiscountAmount(0);
+                    }}
+                    className="flex-1 px-4 py-3 rounded-xl bg-secondary/50 border-none focus:ring-2 focus:ring-primary uppercase"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={applyVoucher}
+                    disabled={isApplyingVoucher || !voucherCode.trim()}
+                    className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold hover:bg-primary dark:hover:bg-primary transition-all disabled:opacity-50"
+                  >
+                    Áp dụng
+                  </button>
+                </div>
+                {voucherError && <p className="text-destructive text-sm font-medium">{voucherError}</p>}
+                {discountAmount > 0 && <p className="text-green-500 text-sm font-bold">Đã áp dụng giảm {discountAmount.toLocaleString('vi-VN')}đ</p>}
                 
                 <div className="space-y-3">
                   <div className="flex justify-between text-muted-foreground">
@@ -195,9 +247,15 @@ const CheckoutPage = () => {
                     <span>Phí vận chuyển</span>
                     <span className="text-green-500 font-bold">Miễn phí</span>
                   </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-green-500 font-bold">
+                      <span>Giảm giá</span>
+                      <span>-{discountAmount.toLocaleString('vi-VN')}đ</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-2xl font-black pt-2">
                     <span>Tổng cộng</span>
-                    <span className="text-primary">{totalPrice().toLocaleString('vi-VN')}đ</span>
+                    <span className="text-primary">{finalPrice.toLocaleString('vi-VN')}đ</span>
                   </div>
                 </div>
 
@@ -242,7 +300,7 @@ const CheckoutPage = () => {
                
                <div className="w-64 h-64 bg-white p-4 rounded-3xl mx-auto shadow-2xl relative group">
                   <img 
-                    src={`https://api.vietqr.io/image/970422-0901234567-Vndm0Y.jpg?amount=${totalPrice()}&addInfo=TouchLove%20${orderInfo?.orderNumber}`}
+                    src={`https://api.vietqr.io/image/970422-0901234567-Vndm0Y.jpg?amount=${finalPrice}&addInfo=TouchLove%20${orderInfo?.orderNumber}`}
                     alt="VietQR"
                     className="w-full h-full object-contain"
                   />
@@ -268,7 +326,7 @@ const CheckoutPage = () => {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Số tiền</p>
-                      <p className="font-bold text-primary">{totalPrice().toLocaleString('vi-VN')}đ</p>
+                      <p className="font-bold text-primary">{finalPrice.toLocaleString('vi-VN')}đ</p>
                     </div>
                   </div>
                   <div className="p-3 bg-primary/10 rounded-xl text-xs font-medium text-primary text-center">

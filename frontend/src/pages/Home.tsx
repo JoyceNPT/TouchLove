@@ -30,7 +30,12 @@ const Home = () => {
       try {
         const res = await axiosInstance.get('/store/products');
         if (res.data.success) {
-          setProducts(res.data.data);
+          // Filter out products with StockQuantity == 0
+          const availableProducts = res.data.data.filter((p: Product) => p.stockQuantity > 0);
+          setProducts(availableProducts);
+          
+          // Sync cart items with fresh product data
+          useCartStore.getState().syncCartItems(res.data.data);
         }
       } catch (err) {
         console.error('Failed to fetch products', err);
@@ -38,7 +43,21 @@ const Home = () => {
         setIsLoading(false);
       }
     };
+    
     fetchProducts();
+
+    const onFocusOrVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchProducts();
+      }
+    };
+    window.addEventListener('focus', onFocusOrVisible);
+    document.addEventListener('visibilitychange', onFocusOrVisible);
+    
+    return () => {
+      window.removeEventListener('focus', onFocusOrVisible);
+      document.removeEventListener('visibilitychange', onFocusOrVisible);
+    };
   }, []);
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -55,6 +74,7 @@ const Home = () => {
         id: product.id,
         name: product.name,
         price: product.price,
+        stockQuantity: product.stockQuantity,
         imageUrl: images[0],
         quantity: 1
       });
@@ -233,6 +253,11 @@ const Home = () => {
                 >
                   Khám phá cửa hàng
                 </a>
+              </div>
+              <div className="mt-8">
+                <Link to="/policies" className="text-white/60 hover:text-white text-sm font-medium transition-colors underline underline-offset-4">
+                  Chính sách & Điều khoản
+                </Link>
               </div>
             </div>
           </div>

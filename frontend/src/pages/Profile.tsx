@@ -27,6 +27,13 @@ const Profile = () => {
         <h2 className="text-lg font-bold mb-4">Quản lý</h2>
 
         <ProfileItem 
+          icon={<User className="w-5 h-5 text-blue-500" />} 
+          title="Chỉnh sửa hồ sơ" 
+          description="Cập nhật thông tin cá nhân của bạn"
+          link="/profile/edit"
+        />
+
+        <ProfileItem 
           icon={<Shield className="w-5 h-5 text-green-500" />} 
           title="Bảo mật" 
           description="Đổi mật khẩu và quản lý phiên đăng nhập"

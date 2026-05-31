@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using TouchLove.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace TouchLove.Domain.Entities;
 
@@ -22,6 +23,9 @@ public class User : IdentityUser<Guid>
     public string? Bio { get; set; }
     public string? NfcPassword { get; set; } // Passcode 6 số để quét NFC
     public bool IsProfilePublic { get; set; } = true;
+
+    [MaxLength(500)]
+    public string? BlockReason { get; set; }
 
     // Navigation
     public UserSetting? Setting { get; set; }

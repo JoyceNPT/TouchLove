@@ -2,10 +2,53 @@ import { motion } from 'framer-motion';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
+import { useEffect, useState } from 'react';
+import { axiosInstance } from '../api/axiosInstance';
 
 const CartPage = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeItem, totalPrice, totalItems } = useCartStore();
+  const [stockStatus, setStockStatus] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    // Fetch latest stock quantities
+    const fetchStock = async () => {
+      try {
+        const res = await axiosInstance.get('/store/products');
+        if (res.data.success) {
+          const status: Record<string, number> = {};
+          res.data.data.forEach((p: any) => {
+            status[p.id] = p.stockQuantity;
+          });
+          setStockStatus(status);
+          
+          // Sync cart items with fresh product data
+          const { syncCartItems } = useCartStore.getState();
+          syncCartItems(res.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch product stock', err);
+      }
+    };
+    
+    if (items.length > 0) fetchStock();
+
+    const onFocusOrVisible = () => {
+      if (document.visibilityState === 'visible' && items.length > 0) {
+        fetchStock();
+      }
+    };
+    window.addEventListener('focus', onFocusOrVisible);
+    document.addEventListener('visibilitychange', onFocusOrVisible);
+    
+    return () => {
+      window.removeEventListener('focus', onFocusOrVisible);
+      document.removeEventListener('visibilitychange', onFocusOrVisible);
+    };
+  }, [items.length]);
+
+  const hasSoldOutItems = items.some(item => stockStatus[item.id] !== undefined && stockStatus[item.id] === 0);
+
 
   if (items.length === 0) {
     return (
@@ -49,7 +92,14 @@ const CartPage = () => {
               </div>
               
               <div className="flex-1 text-center sm:text-left">
-                <h3 className="text-xl font-bold mb-1">{item.name}</h3>
+                <div className="flex items-center gap-3 justify-center sm:justify-start mb-1">
+                  <h3 className="text-xl font-bold">{item.name}</h3>
+                  {stockStatus[item.id] === 0 && (
+                    <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full uppercase">
+                      Đã bán hết
+                    </span>
+                  )}
+                </div>
                 <p className="text-primary font-black text-lg">
                   {item.price.toLocaleString('vi-VN')}đ
                 </p>
@@ -102,7 +152,12 @@ const CartPage = () => {
 
             <button
               onClick={() => navigate('/checkout')}
-              className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl"
+              disabled={hasSoldOutItems}
+              className={`w-full py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl ${
+                hasSoldOutItems
+                  ? 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                  : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:scale-[1.02] active:scale-[0.98]'
+              }`}
             >
               Thanh toán ngay <ArrowRight className="w-6 h-6" />
             </button>

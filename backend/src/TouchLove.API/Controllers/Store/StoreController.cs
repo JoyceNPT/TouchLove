@@ -48,4 +48,12 @@ public class StoreController : ControllerBase
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         return Ok(await _storeService.PlaceOrderAsync(userId, req, ct));
     }
+
+    [HttpPost("orders/confirm-payment/{transactionId}")]
+    public async Task<IActionResult> ConfirmPayment(string transactionId, CancellationToken ct)
+    {
+        // Typically this would be a webhook from a payment provider, 
+        // but for now we expose it so frontend or admin can call it.
+        return Ok(await _storeService.ConfirmPendingOrderAsync(transactionId, ct));
+    }
 }

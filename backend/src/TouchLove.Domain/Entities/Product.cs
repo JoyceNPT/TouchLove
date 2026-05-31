@@ -17,6 +17,9 @@ public class Product : BaseEntity
     
     [Column(TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal CostPrice { get; set; }
     
     public int StockQuantity { get; set; }
     
@@ -26,6 +29,9 @@ public class Product : BaseEntity
     public Supplier? Supplier { get; set; }
     
     public bool IsActive { get; set; } = true;
+    
+
+    public DateTime? DeletedAt { get; set; }
     
     // Navigation
     public ICollection<OrderItem> OrderItems { get; set; } = [];
