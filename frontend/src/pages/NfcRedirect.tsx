@@ -8,7 +8,7 @@ const NfcRedirect = () => {
 
   useEffect(() => {
     if (keyId) {
-      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
       // Redirect browser to backend NFC processing endpoint
       window.location.href = `${backendUrl}/nfc/${keyId}`;
     }
