@@ -19,8 +19,14 @@ interface Product {
   supplierId?: string;
 }
 
+interface Supplier {
+  id: string;
+  name: string;
+}
+
 const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -39,20 +45,33 @@ const AdminProducts = () => {
     supplierId: '',
     imageUrls: '[]'
   });
+  
+  // Supplier Modal State
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [supplierFormData, setSupplierFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: ''
+  });
 
-  const fetchProducts = async () => {
+  const fetchProductsAndSuppliers = async () => {
     try {
-      const res = await axiosInstance.get('/admin/store/products');
-      if (res.data.success) setProducts(res.data.data);
+      const [prodRes, supRes] = await Promise.all([
+        axiosInstance.get('/admin/store/products'),
+        axiosInstance.get('/admin/store/suppliers')
+      ]);
+      if (prodRes.data.success) setProducts(prodRes.data.data);
+      if (supRes.data.success) setSuppliers(supRes.data.data);
     } catch (err) {
-      console.error('Failed to fetch products', err);
+      console.error('Failed to fetch data', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchProductsAndSuppliers();
   }, []);
 
   const handleDeleteClick = (id: string) => {
@@ -111,17 +130,40 @@ const AdminProducts = () => {
         const res = await axiosInstance.put(`/admin/store/products/${editingProduct.id}`, payload);
         if (res.data.success) {
           toast.success('Cập nhật sản phẩm thành công');
-          fetchProducts();
+          fetchProductsAndSuppliers();
           setIsModalOpen(false);
         } else toast.error(res.data.message);
       } else {
         const res = await axiosInstance.post(`/admin/store/products`, payload);
         if (res.data.success) {
           toast.success('Thêm sản phẩm thành công');
-          fetchProducts();
+          fetchProductsAndSuppliers();
           setIsModalOpen(false);
         } else toast.error(res.data.message);
       }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  };
+
+  const handleAddSupplier = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        id: "00000000-0000-0000-0000-000000000000",
+        ...supplierFormData
+      };
+      const res = await axiosInstance.post(`/admin/store/suppliers`, payload);
+      if (res.data.success) {
+        toast.success('Thêm nhà cung cấp thành công');
+        setIsSupplierModalOpen(false);
+        setSupplierFormData({ name: '', phone: '', email: '', address: '' });
+        fetchProductsAndSuppliers();
+        // Automatically select the newly created supplier
+        if (res.data.data) {
+          setFormData(prev => ({ ...prev, supplierId: res.data.data }));
+        }
+      } else toast.error(res.data.message);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -251,12 +293,56 @@ const AdminProducts = () => {
                 <input required type="number" value={formData.stockQuantity} onChange={e => setFormData({...formData, stockQuantity: Number(e.target.value)})} className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-zinc-500 mb-1">Nhà cung cấp</label>
+                <div className="flex gap-2">
+                  <select value={formData.supplierId} onChange={e => setFormData({...formData, supplierId: e.target.value})} className="flex-1 px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 outline-none">
+                    <option value="">Chọn nhà cung cấp</option>
+                    {suppliers.map(sup => (
+                      <option key={sup.id} value={sup.id}>{sup.name}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => setIsSupplierModalOpen(true)} className="px-4 py-3 bg-secondary text-primary rounded-xl font-bold hover:bg-primary/20">
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-zinc-500 mb-1">Mô tả</label>
                 <textarea rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent" />
               </div>
               <div className="flex justify-end gap-3 mt-8">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-zinc-600 hover:bg-zinc-100">Hủy</button>
                 <button type="submit" className="px-6 py-3 rounded-xl font-bold bg-primary text-white hover:opacity-90">Lưu sản phẩm</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isSupplierModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl p-8 shadow-2xl">
+            <h2 className="text-xl font-bold mb-6">Thêm nhà cung cấp mới</h2>
+            <form onSubmit={handleAddSupplier} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 mb-1">Tên nhà cung cấp</label>
+                <input required type="text" value={supplierFormData.name} onChange={e => setSupplierFormData({...supplierFormData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 mb-1">Số điện thoại</label>
+                <input type="text" value={supplierFormData.phone} onChange={e => setSupplierFormData({...supplierFormData, phone: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 mb-1">Email</label>
+                <input type="email" value={supplierFormData.email} onChange={e => setSupplierFormData({...supplierFormData, email: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 mb-1">Địa chỉ</label>
+                <input type="text" value={supplierFormData.address} onChange={e => setSupplierFormData({...supplierFormData, address: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent" />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => setIsSupplierModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-zinc-600 hover:bg-zinc-100">Hủy</button>
+                <button type="submit" className="px-5 py-2.5 rounded-xl font-bold bg-primary text-white hover:opacity-90">Thêm mới</button>
               </div>
             </form>
           </div>

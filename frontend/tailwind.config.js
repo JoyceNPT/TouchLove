@@ -41,12 +41,54 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      typography: (theme) => ({
+        DEFAULT: {
+          css: {
+            h1: {
+              color: theme('colors.primary.DEFAULT'),
+              fontWeight: '900',
+            },
+            h2: {
+              color: theme('colors.primary.DEFAULT'),
+              fontWeight: '900',
+              borderBottom: '2px solid',
+              borderColor: 'hsl(var(--primary) / 0.2)',
+              paddingBottom: '0.5rem',
+              marginTop: '2em',
+            },
+            h3: {
+              color: theme('colors.foreground'),
+              fontWeight: '800',
+              marginTop: '1.5em',
+            },
+            a: {
+              color: theme('colors.primary.DEFAULT'),
+              '&:hover': {
+                color: theme('colors.pink.500'),
+              },
+            },
+            blockquote: {
+              borderLeftColor: theme('colors.primary.DEFAULT'),
+              backgroundColor: theme('colors.primary.DEFAULT / 5%'),
+              padding: '1rem',
+              borderRadius: '0.5rem',
+              fontStyle: 'italic',
+            },
+            hr: {
+              borderColor: theme('colors.border'),
+              marginTop: '2em',
+              marginBottom: '2em',
+            },
+          },
+        },
+      }),
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
     },
-  },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -97,6 +98,19 @@
   @apply bg-white/70 backdrop-blur-md border border-white/20;
 }
 
+
 .dark .glass {
   @apply bg-black/50 backdrop-blur-md border border-white/10;
+}
+
+/* Custom Typography Overrides for Tailwind v4 */
+.prose h1, .prose h2 {
+  @apply font-black text-primary border-b-2 pb-2 mt-8;
+  border-color: hsl(var(--primary) / 0.2);
+}
+.prose h3 {
+  @apply font-extrabold text-foreground mt-6;
+}
+.prose a {
+  @apply text-primary font-bold no-underline hover:underline;
 }

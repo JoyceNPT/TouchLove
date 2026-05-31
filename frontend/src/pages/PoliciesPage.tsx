@@ -4,21 +4,24 @@ import { FileText, ShieldCheck, RefreshCw } from 'lucide-react';
 import { axiosInstance } from '../api/axiosInstance';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import { useTranslation } from 'react-i18next';
 
 const PoliciesPage = () => {
   const [activeTab, setActiveTab] = useState<'terms' | 'privacy'>('terms');
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const { i18n } = useTranslation();
 
   useEffect(() => {
-    fetchPolicy(activeTab);
-  }, [activeTab]);
+    fetchPolicy(activeTab, i18n.language || 'vi');
+  }, [activeTab, i18n.language]);
 
-  const fetchPolicy = async (tab: 'terms' | 'privacy') => {
+  const fetchPolicy = async (tab: 'terms' | 'privacy', lang: string) => {
     setIsLoading(true);
     try {
       const code = tab === 'terms' ? 'TERMS' : 'PRIVACY';
-      const res = await axiosInstance.get(`/policies/${code}/vi`);
+      const res = await axiosInstance.get(`/policies/${code}/${lang}`);
       setContent(res.data.data.content || 'Nội dung đang được cập nhật...');
     } catch (err) {
       setContent('Không thể tải nội dung chính sách. Vui lòng thử lại sau.');
@@ -74,7 +77,7 @@ const PoliciesPage = () => {
           </div>
         ) : (
           <div className="prose prose-zinc dark:prose-invert max-w-none prose-headings:font-black prose-a:text-primary">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
               {content}
             </ReactMarkdown>
           </div>
