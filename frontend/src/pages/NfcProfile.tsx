@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import * as signalR from '@microsoft/signalr';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getInitials } from '../utils/helpers';
 import { 
   User, 
   Settings, 
@@ -427,7 +428,7 @@ const NfcProfile = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-5xl">
+    <div className="container mx-auto px-4 py-12 max-w-5xl overflow-x-hidden">
       {pairingNotification && (
         <div className="mb-6 p-4 bg-primary/10 border border-primary/30 rounded-2xl flex items-center gap-3 text-sm font-bold text-primary">
           <Bell className="w-5 h-5 shrink-0 animate-bounce" />
@@ -657,7 +658,7 @@ const NfcProfile = () => {
                         {avatarUrl ? (
                           <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                         ) : (
-                          <User className="w-12 h-12 text-primary" />
+                          <span className="text-3xl font-black text-primary">{getInitials(displayName || user?.displayName)}</span>
                         )}
                         <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black cursor-pointer space-y-1">
                           <Camera className="w-5 h-5" />

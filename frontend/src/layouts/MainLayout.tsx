@@ -6,6 +6,7 @@ import { Moon, Sun, Heart, User, ShoppingCart, Languages, Compass } from 'lucide
 import { useCartStore } from '../store/useCartStore';
 import { useTranslation } from 'react-i18next';
 import { motion, useAnimation } from 'framer-motion';
+import { getInitials } from '../utils/helpers';
 
 const MainLayout = () => {
   const { user, isAuthenticated, clearAuth } = useAuthStore();
@@ -92,7 +93,7 @@ const MainLayout = () => {
                     {user?.avatarUrl ? (
                       <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full rounded-full object-cover" />
                     ) : (
-                      <User className="w-4 h-4 text-primary" />
+                      <span className="text-[10px] font-black text-primary">{getInitials(user?.nickname || user?.displayName)}</span>
                     )}
                   </div>
                   <span className="hidden sm:inline font-black tracking-tight">{user?.nickname || user?.displayName}</span>

@@ -33,6 +33,7 @@ import { toast } from '../store/useToastStore';
 import PhotoUploadModal from '../components/shared/PhotoUploadModal';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { getInitials } from '../utils/helpers';
 
 interface CoupleData {
   id: string;
@@ -202,7 +203,7 @@ const MemoryCarouselModal = ({
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/45 text-primary flex items-center justify-center font-black shadow-inner text-sm">
-              {memory.uploadedBy ? memory.uploadedBy.substring(0, 2).toUpperCase() : 'TL'}
+              {getInitials(memory.uploadedBy)}
             </div>
             <div>
               <h4 className="font-bold text-sm">Đăng bởi {memory.uploadedBy || 'Ẩn danh'}</h4>
@@ -271,43 +272,8 @@ const CouplePage = () => {
       : data.coupleName)
     : '';
 
-  // Demo placeholder memories
-  const memoriesToShow = data?.memories && data.memories.length > 0
-    ? data.memories
-    : [
-        {
-          id: 'demo-1',
-          url: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&q=80&w=600',
-          caption: 'Lần đầu tiên hai đứa gặp nhau ở quán cà phê nhỏ, ngượng ngùng không dám nhìn thẳng mắt nhau... 💕',
-          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          mimeType: 'image/jpeg',
-          uploadedBy: data?.partnerName || 'Đối phương'
-        },
-        {
-          id: 'demo-2',
-          url: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=600',
-          caption: 'Chuyến đi phượt cuối tuần đầy ắp tiếng cười. Cùng nhau đi trốn đến nơi xa xôi rộng lớn 🚗✨',
-          createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-          mimeType: 'image/jpeg',
-          uploadedBy: 'TouchLove'
-        },
-        {
-          id: 'demo-3',
-          url: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&q=80&w=600',
-          caption: 'Cùng ngắm hoàng hôn đỏ rực buông xuống. Mong rằng hoàng hôn nào chúng ta cũng có nhau!',
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          mimeType: 'image/jpeg',
-          uploadedBy: 'Bạn'
-        },
-        {
-          id: 'demo-4',
-          url: 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=600',
-          caption: 'Khoảnh khắc bình yên nhất là khi được ở bên em. Không cần đi đâu xa 🌸',
-          createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          mimeType: 'image/jpeg',
-          uploadedBy: 'Hệ thống'
-        }
-      ];
+  // Removed demo placeholder memories
+  const memoriesToShow = data?.memories || [];
 
   const spawnHearts = () => {
     const newHearts = Array.from({ length: 12 }).map(() => ({
@@ -638,7 +604,7 @@ const CouplePage = () => {
             {/* Left Avatar */}
             <div className="relative z-10 flex flex-col items-center gap-1 hover:scale-105 transition-transform duration-300">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white dark:border-zinc-800 shadow-2xl overflow-hidden bg-muted relative group ring-4 ring-primary/10">
-                {data.avatarUrl ? <img src={data.avatarUrl} alt="You" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-primary/40 bg-primary/5">Bạn</div>}
+                {data.avatarUrl ? <img src={data.avatarUrl} alt="You" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-primary/40 bg-primary/5">{getInitials(user?.displayName || 'Bạn')}</div>}
               </div>
             </div>
 
@@ -658,7 +624,7 @@ const CouplePage = () => {
             {/* Right Avatar */}
             <div className="relative z-10 flex flex-col items-center gap-1 hover:scale-105 transition-transform duration-300">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white dark:border-zinc-800 shadow-2xl overflow-hidden bg-muted relative group ring-4 ring-primary/10">
-                {data.partnerAvatarUrl ? <img src={data.partnerAvatarUrl} alt={data.partnerName} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-primary/40 bg-primary/5">TL</div>}
+                {data.partnerAvatarUrl ? <img src={data.partnerAvatarUrl} alt={data.partnerName} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-primary/40 bg-primary/5">{getInitials(data.partnerName)}</div>}
               </div>
             </div>
           </div>
@@ -957,7 +923,7 @@ const CouplePage = () => {
                           <p className="text-white text-sm font-semibold line-clamp-2">{memory.caption}</p>
                           <div className="flex items-center gap-2 mt-2">
                             <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/45 text-primary flex items-center justify-center text-[10px] font-black shadow-inner">
-                              {memory.uploadedBy ? memory.uploadedBy.substring(0, 2).toUpperCase() : 'TL'}
+                              {getInitials(memory.uploadedBy)}
                             </div>
                             <span className="text-white/80 text-[10px] font-bold">Đăng bởi {memory.uploadedBy || 'Ẩn danh'}</span>
                           </div>

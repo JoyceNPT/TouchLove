@@ -28,9 +28,16 @@ public class MemoriesController : ControllerBase
     [HttpPost("{coupleId:guid}")]
     public async Task<IActionResult> UploadMemory(Guid coupleId, [FromForm] List<IFormFile> files, [FromForm] string? caption, CancellationToken ct = default)
     {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var result = await _albumService.UploadMemoryAsync(coupleId, userId, files, caption, ct);
-        return result.Success ? Ok(result) : BadRequest(result);
+        try
+        {
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var result = await _albumService.UploadMemoryAsync(coupleId, userId, files, caption, ct);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<object>.Fail($"Lỗi kết nối S3 trên EC2: {ex.Message}"));
+        }
     }
 
     [HttpDelete("{memoryId}")]
