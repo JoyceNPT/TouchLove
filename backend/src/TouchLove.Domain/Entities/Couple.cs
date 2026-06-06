@@ -10,6 +10,10 @@ public class Couple : BaseEntity
     public string? CoupleName { get; set; }
     public DateOnly StartDate { get; set; }             // Ngày bắt đầu yêu
     public bool IsStartDateConfirmed { get; set; } = false;
+    public int LoveDays => DateTime.UtcNow.Date.Subtract(StartDate.ToDateTime(TimeOnly.MinValue)).Days;
+    
+    public long UsedStorageBytes { get; set; } = 0;
+
     public DateOnly? ProposedStartDate { get; set; }
     public Guid? ProposedByUserId { get; set; }
     public string? Description { get; set; }

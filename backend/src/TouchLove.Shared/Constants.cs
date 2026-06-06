@@ -23,8 +23,8 @@ public static class Constants
 
     public static class Album
     {
-        public const int MaxMemoriesPerCouple = 200;
-        public const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10MB
+        public const long MaxStoragePerCoupleBytes = 1L * 1024 * 1024 * 1024; // 1GB
+        public const long MaxVideoFileSizeBytes = 50L * 1024 * 1024; // 50MB
         public const int DeleteAfterDays = 7;
     }
 

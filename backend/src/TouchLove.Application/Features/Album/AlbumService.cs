@@ -69,15 +69,19 @@ public class AlbumService
         if (!await IsPartnerAsync(coupleId, userId, ct))
             return ApiResponse<MemoryDto>.Fail("Access denied.");
 
-        var count = await _db.Memories.CountAsync(m => m.CoupleId == coupleId, ct);
-        if (count >= Constants.Album.MaxMemoriesPerCouple)
-            return ApiResponse<MemoryDto>.Fail($"Album limit of {Constants.Album.MaxMemoriesPerCouple} photos reached.");
+        var couple = await _db.Couples.FindAsync([coupleId], ct);
+        if (couple == null) return ApiResponse<MemoryDto>.Fail("Couple not found.");
 
+        long incomingBytes = 0;
         foreach (var file in files)
         {
-            if (file.Length > Constants.Album.MaxFileSizeBytes)
-                return ApiResponse<MemoryDto>.Fail($"File size of {file.FileName} exceeds 10MB limit.");
+            incomingBytes += file.Length;
+            if (file.ContentType.StartsWith("video/") && file.Length > Constants.Album.MaxVideoFileSizeBytes)
+                return ApiResponse<MemoryDto>.Fail($"Kích thước video {file.FileName} vượt quá giới hạn 50MB.");
         }
+
+        if (couple.UsedStorageBytes + incomingBytes > Constants.Album.MaxStoragePerCoupleBytes)
+            return ApiResponse<MemoryDto>.Fail("Dung lượng lưu trữ của Couple đã vượt quá giới hạn 1GB.");
 
         var mediaItems = new List<MemoryMediaItem>();
         string primaryUrl = string.Empty;
@@ -121,10 +125,10 @@ public class AlbumService
         };
 
         _db.Memories.Add(memory);
+        couple.UsedStorageBytes += incomingBytes;
         await _db.SaveChangesAsync(ct);
 
-        var couple = await _db.Couples.FindAsync([coupleId], ct);
-        if (couple != null) await _cache.RemoveAsync($"couple:{couple.Id}", ct);
+        await _cache.RemoveAsync($"couple:{couple.Id}", ct);
 
         var user = await _db.Users.FindAsync([userId], ct);
         var uploaderName = user?.DisplayName ?? "Ẩn danh";

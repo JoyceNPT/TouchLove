@@ -1102,3 +1102,42 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260602193946_OptimizeDatabaseSchema') THEN
+    CREATE UNIQUE INDEX "IX_Suppliers_Email" ON "Suppliers" ("Email");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260602193946_OptimizeDatabaseSchema') THEN
+    CREATE UNIQUE INDEX "IX_Products_Slug" ON "Products" ("Slug");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260602193946_OptimizeDatabaseSchema') THEN
+    CREATE UNIQUE INDEX "IX_Orders_OrderNumber" ON "Orders" ("OrderNumber");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260602193946_OptimizeDatabaseSchema') THEN
+    CREATE UNIQUE INDEX "IX_AppPolicies_Code_Language" ON "AppPolicies" ("Code", "Language");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260602193946_OptimizeDatabaseSchema') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260602193946_OptimizeDatabaseSchema', '10.0.7');
+    END IF;
+END $EF$;
+COMMIT;
+

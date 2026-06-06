@@ -32,8 +32,36 @@ public class CleanupDeletedMemoriesJob
             try
             {
                 await _storage.DeleteAsync(memory.StoragePath);
+                
+                long bytesToFree = memory.FileSizeBytes;
+                if (!string.IsNullOrEmpty(memory.AdditionalMediaJson))
+                {
+                    try
+                    {
+                        var mediaItems = System.Text.Json.JsonSerializer.Deserialize<List<TouchLove.Domain.Entities.MemoryMediaItem>>(memory.AdditionalMediaJson);
+                        if (mediaItems != null)
+                        {
+                            bytesToFree = 0;
+                            foreach (var item in mediaItems)
+                            {
+                                bytesToFree += item.FileSizeBytes;
+                                if (item.StoragePath != memory.StoragePath)
+                                    await _storage.DeleteAsync(item.StoragePath);
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                var couple = await _db.Couples.FindAsync([memory.CoupleId]);
+                if (couple != null)
+                {
+                    couple.UsedStorageBytes -= bytesToFree;
+                    if (couple.UsedStorageBytes < 0) couple.UsedStorageBytes = 0;
+                }
+
                 _db.Memories.Remove(memory);
-                _logger.LogInformation("Hard deleted memory {Id} at {Path}", memory.Id, memory.StoragePath);
+                _logger.LogInformation("Hard deleted memory {Id} and freed {Bytes} bytes", memory.Id, bytesToFree);
             }
             catch (Exception ex)
             {
