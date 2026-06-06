@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
@@ -29,6 +29,19 @@ const MainLayout = () => {
     return () => window.removeEventListener('animate-cart', handleAnimateCart);
   }, [cartControls]);
 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const toggleLanguage = () => {
     const newLang = i18n.language === 'vi' ? 'en' : 'vi';
     i18n.changeLanguage(newLang);
@@ -48,8 +61,8 @@ const MainLayout = () => {
 
           <nav className="flex items-center gap-4">
             {(!user || user.userType === 'NFC') && (
-              <Link to="/explore" className="px-3.5 py-2 text-xs font-black hover:text-primary transition-all flex items-center gap-1 bg-primary/5 text-primary rounded-xl">
-                <Compass className="w-4 h-4" /> Khám phá
+              <Link to="/explore" className="px-3.5 py-2 text-xs font-black hover:text-primary transition-all flex items-center gap-1 bg-primary/5 text-primary rounded-xl whitespace-nowrap">
+                <Compass className="w-4 h-4 hidden sm:block" /> {t('home.explore', 'Khám phá')}
               </Link>
             )}
 
@@ -84,31 +97,61 @@ const MainLayout = () => {
             </button>
 
             {isAuthenticated ? (
-              <div className="flex items-center gap-4">
-                <Link 
-                  to={user?.userType === 'NFC' ? '/nfc-profile' : '/profile'}
-                  className="flex items-center gap-2 hover:text-primary transition-colors"
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20">
                     {user?.avatarUrl ? (
                       <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full rounded-full object-cover" />
                     ) : (
-                      <span className="text-[10px] font-black text-primary">{getInitials(user?.nickname || user?.displayName)}</span>
+                      <span className="text-xs font-black text-primary">{getInitials(user?.nickname || user?.displayName)}</span>
                     )}
                   </div>
                   <span className="hidden sm:inline font-black tracking-tight">{user?.nickname || user?.displayName}</span>
-                </Link>
-                {user?.userType === 'Sales' && (
-                  <Link to="/my-orders" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
-                    Đơn hàng
-                  </Link>
-                )}
-                <button
-                  onClick={clearAuth}
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {t('common.logout')}
                 </button>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="px-4 py-2 border-b border-zinc-100 dark:border-zinc-800 mb-2 sm:hidden">
+                      <p className="font-bold text-sm truncate">{user?.nickname || user?.displayName}</p>
+                    </div>
+                    
+                    <Link
+                      to={user?.userType === 'NFC' ? '/nfc-profile' : '/profile'}
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors w-full text-left"
+                    >
+                      <User className="w-4 h-4" />
+                      Hồ sơ cá nhân
+                    </Link>
+
+                    {user?.userType === 'Sales' && (
+                      <Link
+                        to="/my-orders"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors w-full text-left"
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                        Đơn hàng của tôi
+                      </Link>
+                    )}
+
+                    <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1"></div>
+
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        clearAuth();
+                      }}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full text-left"
+                    >
+                      {t('common.logout')}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-2">

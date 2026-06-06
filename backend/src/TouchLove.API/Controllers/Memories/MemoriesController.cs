@@ -12,10 +12,12 @@ namespace TouchLove.API.Controllers.Memories;
 public class MemoriesController : ControllerBase
 {
     private readonly AlbumService _albumService;
+    private readonly IConfiguration _config;
 
-    public MemoriesController(AlbumService albumService)
+    public MemoriesController(AlbumService albumService, IConfiguration config)
     {
         _albumService = albumService;
+        _config = config;
     }
 
     [HttpGet("{coupleId:guid}")]
@@ -36,7 +38,8 @@ public class MemoriesController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<object>.Fail($"Lỗi kết nối S3 trên EC2: {ex.Message}"));
+            var key = _config["Storage:S3:AccessKey"];
+            return StatusCode(500, ApiResponse<object>.Fail($"Lỗi S3: {ex.Message}. (DEBUG: Key hiện tại server đang nạp là: '{key}')"));
         }
     }
 

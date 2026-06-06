@@ -630,29 +630,27 @@ const CouplePage = () => {
           </div>
 
           {/* Couple Name & actions */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center justify-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-zinc-850 to-zinc-600 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent">
-                {coupleDisplayName}
-              </h1>
-              {isOwner && (
-                <button 
-                  onClick={() => setIsPrivacyModalOpen(true)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border shadow-sm ${
-                    isPublic 
-                      ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 dark:hover:bg-emerald-500/20' 
-                      : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700 dark:hover:bg-zinc-700'
-                  }`}
-                  title="Cài đặt riêng tư không gian"
-                >
-                  {isPublic ? (
-                    <><Globe className="w-3.5 h-3.5" /> Công khai</>
-                  ) : (
-                    <><Lock className="w-3.5 h-3.5" /> Riêng tư</>
-                  )}
-                </button>
-              )}
-            </div>
+          <div className="flex flex-col items-center gap-2">
+            {isOwner && (
+              <button 
+                onClick={() => setIsPrivacyModalOpen(true)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border shadow-sm ${
+                  isPublic 
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 dark:hover:bg-emerald-500/20' 
+                    : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700 dark:hover:bg-zinc-700'
+                }`}
+                title="Cài đặt riêng tư không gian"
+              >
+                {isPublic ? (
+                  <><Globe className="w-3.5 h-3.5" /> Công khai</>
+                ) : (
+                  <><Lock className="w-3.5 h-3.5" /> Riêng tư</>
+                )}
+              </button>
+            )}
+            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-zinc-850 to-zinc-600 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent text-center leading-tight">
+              {coupleDisplayName}
+            </h1>
             {isOwner && (
               <Link
                 to="/nfc-profile"
