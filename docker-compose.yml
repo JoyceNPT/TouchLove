@@ -30,7 +30,7 @@ services:
       dockerfile: Dockerfile
     container_name: touchlove-backend
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: Host=touchlove.cdsmemyi00gr.ap-southeast-2.rds.amazonaws.com;Port=5432;Database=postgres;Username=postgres;Password=TouchLove_EXE201
       Redis__ConnectionString: redis:6379
       Email__Host: mailhog
@@ -38,6 +38,12 @@ services:
       Google__ClientId: ${TOUCHLOVE_GOOGLE_CLIENT_ID}
       Google__ClientSecret: ${TOUCHLOVE_GOOGLE_CLIENT_SECRET}
       Frontend__Url: http://13.236.186.178
+      Storage__Provider: S3
+      Storage__S3__AccessKey: ""
+      Storage__S3__SecretKey: ""
+      Storage__S3__Region: ap-southeast-2
+      Storage__S3__BucketName: touchlove-bucket
+      Storage__S3__PublicUrlTemplate: "https://d3qob24l10t88c.cloudfront.net/{key}"
     ports:
       - "5000:8080"
     depends_on:
