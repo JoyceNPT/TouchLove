@@ -43,7 +43,7 @@ public class AdminStoreService
             .Include(p => p.Supplier)
             .IgnoreQueryFilters() // Show deleted for admin if needed, or just normal
             .Where(p => !p.IsDeleted)
-            .Select(p => new AdminProductDto(p.Id, p.Name, p.Slug, p.CostPrice, p.Price, p.StockQuantity, p.Supplier != null ? p.Supplier.Name : "N/A", p.IsActive))
+            .Select(p => new AdminProductDto(p.Id, p.Name, p.Slug, p.Description, p.ImageUrls, p.SupplierId, p.CostPrice, p.Price, p.StockQuantity, p.Supplier != null ? p.Supplier.Name : "N/A", p.IsActive))
             .ToListAsync(ct);
         return ApiResponse<List<AdminProductDto>>.Ok(data);
     }
@@ -170,5 +170,5 @@ public class AdminStoreService
 
 public record CreateProductRequest(string Name, string? Description, decimal CostPrice, decimal Price, int StockQuantity, Guid? SupplierId, string? ImageUrls);
 public record SupplierDto(Guid Id, string Name, string? Phone, string? Email, string? Address);
-public record AdminProductDto(Guid Id, string Name, string Slug, decimal CostPrice, decimal Price, int StockQuantity, string SupplierName, bool IsActive);
+public record AdminProductDto(Guid Id, string Name, string Slug, string? Description, string? ImageUrls, Guid? SupplierId, decimal CostPrice, decimal Price, int StockQuantity, string SupplierName, bool IsActive);
 public record AdminOrderDto(Guid Id, string OrderNumber, string CustomerName, decimal TotalAmount, OrderStatus Status, PaymentStatus PaymentStatus, DateTime CreatedAt);

@@ -119,10 +119,6 @@ public class StoreService
             if (product.StockQuantity < item.Quantity)
                 return ApiResponse<OrderDto>.Fail($"Sản phẩm {product.Name} không đủ hàng (còn lại {product.StockQuantity}).");
 
-            // Subtract stock
-            product.StockQuantity -= item.Quantity;
-            await _cache.RemoveAsync($"store:product:{product.Slug}", ct);
-            
             var orderItem = new OrderItem
             {
                 ProductId = product.Id,

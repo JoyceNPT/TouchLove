@@ -37,6 +37,7 @@ import NfcSetupPin from './pages/NfcSetupPin';
 import NfcRedirect from './pages/NfcRedirect';
 import { ToastContainer } from './components/shared/ToastContainer';
 import { useAuthStore } from './store/authStore';
+import { useCartStore } from './store/useCartStore';
 import { useEffect, useState } from 'react';
 import { axiosInstance } from './api/axiosInstance';
 import { useLocation } from 'react-router-dom';
@@ -46,6 +47,14 @@ import { RefreshCw } from 'lucide-react';
 const UserStatusGuard = () => {
   const location = useLocation();
   const { isAuthenticated, clearAuth } = useAuthStore();
+  const { fetchFromBackend } = useCartStore();
+  
+  // Sync cart on first load if authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchFromBackend();
+    }
+  }, [isAuthenticated, fetchFromBackend]);
 
   useEffect(() => {
     if (isAuthenticated) {

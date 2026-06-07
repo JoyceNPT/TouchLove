@@ -7,6 +7,7 @@ import { CreditCard, Truck, ShieldCheck, CheckCircle2, AlertCircle, QrCode, Buil
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/authStore';
+import { useToastStore } from '../store/useToastStore';
 import { axiosInstance } from '../api/axiosInstance';
 import { useEffect } from 'react';
 
@@ -25,6 +26,7 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const { items, totalPrice, clearCart } = useCartStore();
   const { user } = useAuthStore();
+  const { addToast } = useToastStore();
   const [step, setStep] = useState<'form' | 'payment' | 'success' | 'failure'>('form');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ const CheckoutPage = () => {
       return;
     }
     try {
-      if (isTimeout) alert('Giao dịch đã hết thời gian chờ!');
+      if (isTimeout) addToast('Giao dịch đã hết thời gian chờ!', 'error');
       await axiosInstance.post(`/store/orders/cancel-payment/${orderInfo.orderNumber}`);
       setStep('form');
     } catch (err) {
@@ -79,10 +81,10 @@ const CheckoutPage = () => {
         clearCart();
         setStep('success');
       } else {
-        alert(res.data.message || 'Xác nhận thất bại');
+        addToast(res.data.message || 'Xác nhận thất bại', 'error');
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi hệ thống khi xác nhận');
+      addToast(err.response?.data?.message || 'Lỗi hệ thống khi xác nhận', 'error');
     } finally {
       setIsConfirming(false);
     }
