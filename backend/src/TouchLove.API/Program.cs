@@ -206,22 +206,24 @@ try
     }
 
     // ── Register recurring Hangfire jobs ──────────────────────────────
-    RecurringJob.AddOrUpdate<GenerateDailyMessagesJob>("generate-daily-messages",
+    var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
+
+    recurringJobManager.AddOrUpdate<GenerateDailyMessagesJob>("generate-daily-messages",
         j => j.ExecuteAsync(), "0 17 * * *"); // 00:00 GMT+7 = 17:00 UTC
 
-    RecurringJob.AddOrUpdate<CleanupExpiredTokensJob>("cleanup-expired-tokens",
+    recurringJobManager.AddOrUpdate<CleanupExpiredTokensJob>("cleanup-expired-tokens",
         j => j.ExecuteAsync(), "0 2 * * *");
 
-    RecurringJob.AddOrUpdate<CleanupDeletedMemoriesJob>("cleanup-deleted-memories",
+    recurringJobManager.AddOrUpdate<CleanupDeletedMemoriesJob>("cleanup-deleted-memories",
         j => j.ExecuteAsync(), "0 3 * * *");
 
-    RecurringJob.AddOrUpdate<CleanupExpiredInvitationsJob>("cleanup-expired-invitations",
+    recurringJobManager.AddOrUpdate<CleanupExpiredInvitationsJob>("cleanup-expired-invitations",
         j => j.ExecuteAsync(), "0 * * * *");
 
-    RecurringJob.AddOrUpdate<SendAnniversaryEmailsJob>("send-anniversary-emails",
+    recurringJobManager.AddOrUpdate<SendAnniversaryEmailsJob>("send-anniversary-emails",
         j => j.ExecuteAsync(), "0 8 * * *");
 
-    RecurringJob.AddOrUpdate<CleanupNfcScanLogsJob>("cleanup-nfc-scan-logs",
+    recurringJobManager.AddOrUpdate<CleanupNfcScanLogsJob>("cleanup-nfc-scan-logs",
         j => j.ExecuteAsync(), "0 4 * * 0");
 
     app.MapControllers();
