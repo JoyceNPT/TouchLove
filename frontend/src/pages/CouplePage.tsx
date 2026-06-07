@@ -330,6 +330,8 @@ const CouplePage = () => {
     }
   };
 
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const fetchCoupleData = async () => {
     try {
       const response = await axios.get(`/couples/${coupleId}`);
@@ -351,10 +353,12 @@ const CouplePage = () => {
         }
       } else {
         setData(null);
+        setFetchError(response.data.message || 'API returned success=false');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch couple data', error);
       setData(null);
+      setFetchError(error.message || 'Network Error or Exception');
     } finally {
       setLoading(false);
     }
@@ -488,6 +492,11 @@ const CouplePage = () => {
             <p className="text-sm text-zinc-500 leading-relaxed">
               Tài khoản hoặc thiết bị này chưa được kết nối ghép đôi với nhau. Hãy tiến hành ghép đôi hai thẻ NFC để kích hoạt không gian tình yêu chung.
             </p>
+            {fetchError && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs p-3 rounded-xl mt-4 font-mono break-all text-left">
+                <strong>Debug Info:</strong> {fetchError}
+              </div>
+            )}
           </div>
 
           <button 
