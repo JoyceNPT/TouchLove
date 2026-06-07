@@ -10,11 +10,13 @@ public class AdminStoreService
 {
     private readonly IApplicationDbContext _db;
     private readonly ICacheService _cache;
+    private readonly IFileStorageService _storage;
 
-    public AdminStoreService(IApplicationDbContext db, ICacheService cache)
+    public AdminStoreService(IApplicationDbContext db, ICacheService cache, IFileStorageService storage)
     {
         _db = db;
         _cache = cache;
+        _storage = storage;
     }
 
     // SUPPLIERS
@@ -72,6 +74,8 @@ public class AdminStoreService
         var p = await _db.Products.FindAsync(new object[] { id }, ct);
         if (p == null) return ApiResponse<string>.Fail("Sản phẩm không tồn tại.");
 
+        string? oldImageUrlsJson = p.ImageUrls;
+
         p.Name = req.Name;
         p.Description = req.Description;
         p.CostPrice = req.CostPrice;
@@ -83,6 +87,26 @@ public class AdminStoreService
         await _db.SaveChangesAsync(ct);
         await _cache.RemoveAsync("store:products", ct);
         await _cache.RemoveAsync($"store:product:{p.Slug}", ct);
+
+        // Delete removed images from storage
+        if (!string.IsNullOrEmpty(oldImageUrlsJson))
+        {
+            try
+            {
+                var oldUrls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(oldImageUrlsJson) ?? new List<string>();
+                var newUrls = !string.IsNullOrEmpty(req.ImageUrls) 
+                    ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(req.ImageUrls) ?? new List<string>()
+                    : new List<string>();
+
+                var removedUrls = oldUrls.Except(newUrls).ToList();
+                foreach (var url in removedUrls)
+                {
+                    await _storage.DeleteByUrlAsync(url, ct);
+                }
+            }
+            catch { }
+        }
+
         return ApiResponse<string>.Ok("Cập nhật sản phẩm thành công.");
     }
 
