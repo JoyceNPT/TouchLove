@@ -300,7 +300,7 @@ const CheckoutPage = () => {
                
                <div className="w-64 h-64 bg-white p-4 rounded-3xl mx-auto shadow-2xl relative group">
                   <img 
-                    src={`https://api.vietqr.io/image/970422-0901234567-Vndm0Y.jpg?amount=${finalPrice}&addInfo=TouchLove%20${orderInfo?.orderNumber}`}
+                    src={`https://api.vietqr.io/image/970436-1027053036-compact2.jpg?amount=${finalPrice}&addInfo=TouchLove%20${orderInfo?.orderNumber}`}
                     alt="VietQR"
                     className="w-full h-full object-contain"
                   />
