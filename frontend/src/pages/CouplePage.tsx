@@ -107,13 +107,12 @@ const MemoryCarouselModal = ({
 
   if (!memory) return null;
 
-  const allMedia = [
-    { url: memory.url, mimeType: memory.mimeType },
-    ...(memory.additionalUrls || []).map(u => ({
-      url: u,
-      mimeType: u.match(/\.(mp4|webm|mov|avi)$/i) ? 'video/mp4' : 'image/jpeg'
-    }))
-  ];
+  const allMedia = (memory.additionalUrls && memory.additionalUrls.length > 0)
+    ? memory.additionalUrls.map(u => ({
+        url: u,
+        mimeType: u.match(/\.(mp4|webm|mov|avi)$/i) ? 'video/mp4' : 'image/jpeg'
+      }))
+    : [{ url: memory.url, mimeType: memory.mimeType }];
 
   const current = allMedia[idx];
   const isVideo = current.mimeType?.startsWith('video/');
@@ -922,7 +921,7 @@ const CouplePage = () => {
                 <div className="columns-1 sm:columns-2 md:columns-3 gap-4 space-y-4">
                   {memoriesToShow.map((memory, idx) => {
                     const isVideo = memory.mimeType?.startsWith('video/');
-                    const hasMultiple = (memory.additionalUrls?.length ?? 0) > 0;
+                    const hasMultiple = (memory.additionalUrls?.length ?? 0) > 1;
                     return (
                       <motion.div 
                         key={memory.id}
@@ -952,7 +951,7 @@ const CouplePage = () => {
                         {hasMultiple && (
                           <div className="absolute top-3 left-3 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-full text-white text-[10px] font-bold z-10">
                             <Images className="w-3 h-3" />
-                            {(memory.additionalUrls?.length ?? 0) + 1}
+                            {(memory.additionalUrls?.length ?? 0)}
                           </div>
                         )}
 
@@ -1044,7 +1043,7 @@ const CouplePage = () => {
                 <div className="w-3/4 pl-2 space-y-4">
                   {memoriesToShow.map((memory, idx) => {
                     const isVideo = memory.mimeType?.startsWith('video/');
-                    const hasMultiple = (memory.additionalUrls?.length ?? 0) > 0;
+                    const hasMultiple = (memory.additionalUrls?.length ?? 0) > 1;
                     return (
                       <motion.div
                         key={`tl-right-${memory.id}`}
@@ -1067,7 +1066,7 @@ const CouplePage = () => {
                             )}
                             {hasMultiple && (
                               <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white text-[9px] font-black">
-                                +{(memory.additionalUrls?.length ?? 0)}
+                                +{(memory.additionalUrls?.length ?? 0) - 1}
                               </div>
                             )}
                           </div>
