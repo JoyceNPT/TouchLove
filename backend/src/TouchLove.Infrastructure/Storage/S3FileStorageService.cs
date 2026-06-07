@@ -90,6 +90,21 @@ public class S3FileStorageService : IFileStorageService
         await client.DeleteObjectAsync(bucketName, fileIdentifier, ct);
     }
 
+    public async Task DeleteByUrlAsync(string publicUrl, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(publicUrl)) return;
+        try
+        {
+            var uri = new Uri(publicUrl);
+            var key = uri.AbsolutePath.TrimStart('/');
+            if (!string.IsNullOrEmpty(key))
+            {
+                await DeleteAsync(key, ct);
+            }
+        }
+        catch { }
+    }
+
     public string GetPublicUrl(string fileIdentifier)
     {
         if (fileIdentifier.StartsWith("http://") || fileIdentifier.StartsWith("https://"))

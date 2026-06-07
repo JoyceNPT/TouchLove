@@ -7,6 +7,7 @@ public interface IFileStorageService
 {
     Task<FileUploadResult> UploadAsync(IFormFile file, string folder, CancellationToken ct = default);
     Task DeleteAsync(string fileIdentifier, CancellationToken ct = default);
+    Task DeleteByUrlAsync(string publicUrl, CancellationToken ct = default);
     string GetPublicUrl(string fileIdentifier);
 }
 

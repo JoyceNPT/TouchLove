@@ -156,6 +156,7 @@ public class NfcProfileController : ControllerBase
 
         try
         {
+            var oldAvatarUrl = user.AvatarUrl;
             var uploadResult = await _storage.UploadAsync(file, $"users/{userId}/avatars", ct);
             user.AvatarUrl = uploadResult.PublicUrl;
             user.UpdatedAt = DateTime.UtcNow;
@@ -163,6 +164,11 @@ public class NfcProfileController : ControllerBase
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
                 return Ok(ApiResponse<string>.Fail("Lưu ảnh đại diện thất bại."));
+
+            if (!string.IsNullOrEmpty(oldAvatarUrl) && oldAvatarUrl != uploadResult.PublicUrl)
+            {
+                await _storage.DeleteByUrlAsync(oldAvatarUrl, ct);
+            }
 
             return Ok(ApiResponse<string>.Ok(uploadResult.PublicUrl));
         }

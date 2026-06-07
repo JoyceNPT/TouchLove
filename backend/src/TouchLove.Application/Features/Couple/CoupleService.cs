@@ -138,13 +138,26 @@ public class CoupleService
 
         // Determine if user is Partner A or B
         var keychainA = await _db.Keychains.FirstOrDefaultAsync(k => k.Id == couple.KeychainAId && k.UserId == userId, ct);
+        string? oldAvatarUrl = null;
         if (keychainA != null)
+        {
+            oldAvatarUrl = couple.AvatarAUrl;
             couple.AvatarAUrl = result.PublicUrl;
+        }
         else
+        {
+            oldAvatarUrl = couple.AvatarBUrl;
             couple.AvatarBUrl = result.PublicUrl;
+        }
 
         await _db.SaveChangesAsync(ct);
         await _cache.RemoveAsync($"couple:{couple.Id}", ct);
+        
+        if (!string.IsNullOrEmpty(oldAvatarUrl) && oldAvatarUrl != result.PublicUrl)
+        {
+            await _storage.DeleteByUrlAsync(oldAvatarUrl, ct);
+        }
+        
         return ApiResponse<string>.Ok(result.PublicUrl);
     }
 

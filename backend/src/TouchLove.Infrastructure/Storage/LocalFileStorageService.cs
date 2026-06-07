@@ -58,6 +58,12 @@ public class LocalFileStorageService : IFileStorageService
         return Task.CompletedTask;
     }
 
+    public Task DeleteByUrlAsync(string publicUrl, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(publicUrl)) return Task.CompletedTask;
+        return DeleteAsync(publicUrl, ct);
+    }
+
     public string GetPublicUrl(string fileIdentifier)
         => fileIdentifier.StartsWith("/") ? fileIdentifier : $"/{fileIdentifier}";
 
