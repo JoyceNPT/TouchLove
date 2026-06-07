@@ -958,7 +958,7 @@ const CouplePage = () => {
 
                         {/* Edit/Delete Actions */}
                         {isPartner && (
-                          <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                          <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-20">
                             <button 
                               onClick={(e) => { e.stopPropagation(); setEditingMemory(memory); }}
                               className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md flex items-center justify-center text-white transition-colors"
@@ -1219,13 +1219,13 @@ const CouplePage = () => {
       {/* Delete Confirm Modal */}
       <ConfirmModal
         isOpen={!!memoryToDelete}
-        onClose={() => setMemoryToDelete(null)}
+        onCancel={() => setMemoryToDelete(null)}
         onConfirm={handleDeleteMemory}
         title="Xóa Kỷ Niệm"
         message="Bạn có chắc chắn muốn xóa kỷ niệm này? Kỷ niệm này sẽ bị xóa vĩnh viễn và không thể khôi phục."
         confirmText="Xóa"
         cancelText="Hủy"
-        isDestructive={true}
+        type="danger"
       />
 
       {/* Memory Carousel Modal */}
