@@ -51,11 +51,11 @@ public class MemoriesController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    [HttpPatch("{memoryId}")]
-    public async Task<IActionResult> UpdateMemory(Guid memoryId, [FromBody] UpdateMemoryRequest request, CancellationToken ct = default)
+    [HttpPut("{memoryId}")]
+    public async Task<IActionResult> UpdateMemory(Guid memoryId, [FromForm] List<IFormFile>? files, [FromForm] string? caption, CancellationToken ct = default)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var result = await _albumService.UpdateMemoryAsync(memoryId, userId, request.Caption, request.SortOrder, ct);
+        var result = await _albumService.UpdateMemoryWithFilesAsync(memoryId, userId, files, caption, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 }

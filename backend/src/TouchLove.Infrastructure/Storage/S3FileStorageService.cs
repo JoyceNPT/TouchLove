@@ -22,7 +22,7 @@ public class S3FileStorageService : IFileStorageService
     {
         var accessKey = _config["Storage:S3:AccessKey"];
         var secretKey = _config["Storage:S3:SecretKey"];
-        var region = _config["Storage:S3:Region"] ?? "ap-southeast-1";
+        var region = _config["Storage:S3:Region"] ?? "ap-southeast-2";
 
         var regionEndpoint = RegionEndpoint.GetBySystemName(region);
 
@@ -73,7 +73,7 @@ public class S3FileStorageService : IFileStorageService
         await fileTransferUtility.UploadAsync(uploadRequest, ct);
 
         var publicUrlTemplate = _config["Storage:S3:PublicUrlTemplate"] ?? "https://{bucket}.s3.{region}.amazonaws.com/{key}";
-        var region = _config["Storage:S3:Region"] ?? "ap-southeast-1";
+        var region = _config["Storage:S3:Region"] ?? "ap-southeast-2";
         
         var publicUrl = publicUrlTemplate
             .Replace("{bucket}", bucketName)
@@ -96,7 +96,7 @@ public class S3FileStorageService : IFileStorageService
             return fileIdentifier;
 
         var bucketName = _config["Storage:S3:BucketName"] ?? "touchlove-bucket";
-        var region = _config["Storage:S3:Region"] ?? "ap-southeast-1";
+        var region = _config["Storage:S3:Region"] ?? "ap-southeast-2";
         var publicUrlTemplate = _config["Storage:S3:PublicUrlTemplate"] ?? "https://{bucket}.s3.{region}.amazonaws.com/{key}";
 
         return publicUrlTemplate

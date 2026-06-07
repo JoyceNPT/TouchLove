@@ -89,7 +89,7 @@ public class AlbumService
         for (int i = 0; i < files.Count; i++)
         {
             var file = files[i];
-            var uploadResult = await _storage.UploadAsync(file, coupleId.ToString(), ct);
+            var uploadResult = await _storage.UploadAsync(file, $"CoupleSpace/{coupleId}", ct);
             
             if (i == 0)
             {
@@ -154,12 +154,38 @@ public class AlbumService
         if (!await IsPartnerAsync(memory.CoupleId, userId, ct))
             return ApiResponse<string>.Fail("Access denied.");
 
-        memory.IsDeleted = true;
-        memory.DeleteScheduledAt = DateTime.UtcNow.AddDays(Constants.Album.DeleteAfterDays);
+        long freedBytes = 0;
+        
+        // Delete all files from S3
+        if (!string.IsNullOrEmpty(memory.AdditionalMediaJson))
+        {
+            var extraMedia = System.Text.Json.JsonSerializer.Deserialize<List<MemoryMediaItem>>(memory.AdditionalMediaJson);
+            if (extraMedia != null)
+            {
+                foreach (var media in extraMedia)
+                {
+                    await _storage.DeleteAsync(media.StoragePath, ct);
+                    freedBytes += media.FileSizeBytes;
+                }
+            }
+        }
+        else if (!string.IsNullOrEmpty(memory.StoragePath))
+        {
+            await _storage.DeleteAsync(memory.StoragePath, ct);
+            freedBytes += memory.FileSizeBytes;
+        }
+
+        if (memory.Couple != null)
+        {
+            memory.Couple.UsedStorageBytes -= freedBytes;
+            if (memory.Couple.UsedStorageBytes < 0) memory.Couple.UsedStorageBytes = 0;
+            await _cache.RemoveAsync($"couple:{memory.Couple.Id}", ct);
+        }
+
+        _db.Memories.Remove(memory);
         await _db.SaveChangesAsync(ct);
 
-        if (memory.Couple != null) await _cache.RemoveAsync($"couple:{memory.Couple.Id}", ct);
-        return ApiResponse<string>.Ok("Memory deleted. It will be permanently removed in 7 days.");
+        return ApiResponse<string>.Ok("Đã xóa vĩnh viễn kỷ niệm và các tệp đính kèm.");
     }
 
     public async Task<ApiResponse<string>> UpdateMemoryAsync(Guid memoryId, Guid userId, string? caption, int? sortOrder, CancellationToken ct = default)
@@ -175,6 +201,125 @@ public class AlbumService
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse<string>.Ok("Memory updated.");
+    }
+
+    public async Task<ApiResponse<MemoryDto>> UpdateMemoryWithFilesAsync(Guid memoryId, Guid userId, List<Microsoft.AspNetCore.Http.IFormFile>? newFiles, string? caption, CancellationToken ct = default)
+    {
+        var memory = await _db.Memories.Include(m => m.Couple).FirstOrDefaultAsync(m => m.Id == memoryId, ct);
+        if (memory == null) return ApiResponse<MemoryDto>.Fail("Memory not found.");
+
+        if (!await IsPartnerAsync(memory.CoupleId, userId, ct))
+            return ApiResponse<MemoryDto>.Fail("Access denied.");
+
+        if (caption != null) memory.Caption = caption.Length > 200 ? caption[..200] : caption;
+
+        string primaryUrl = string.Empty;
+        var additionalUrls = new List<string>();
+
+        if (newFiles != null && newFiles.Count > 0)
+        {
+            var couple = memory.Couple;
+            long incomingBytes = 0;
+            foreach (var file in newFiles)
+            {
+                incomingBytes += file.Length;
+                if (file.ContentType.StartsWith("video/") && file.Length > Constants.Album.MaxVideoFileSizeBytes)
+                    return ApiResponse<MemoryDto>.Fail($"Kích thước video {file.FileName} vượt quá giới hạn 50MB.");
+            }
+
+            // Calculate freed bytes
+            long freedBytes = 0;
+            if (!string.IsNullOrEmpty(memory.AdditionalMediaJson))
+            {
+                var extraMedia = System.Text.Json.JsonSerializer.Deserialize<List<MemoryMediaItem>>(memory.AdditionalMediaJson);
+                if (extraMedia != null)
+                {
+                    foreach (var media in extraMedia)
+                    {
+                        await _storage.DeleteAsync(media.StoragePath, ct);
+                        freedBytes += media.FileSizeBytes;
+                    }
+                }
+            }
+            else if (!string.IsNullOrEmpty(memory.StoragePath))
+            {
+                await _storage.DeleteAsync(memory.StoragePath, ct);
+                freedBytes += memory.FileSizeBytes;
+            }
+
+            if (couple != null)
+            {
+                couple.UsedStorageBytes = couple.UsedStorageBytes - freedBytes + incomingBytes;
+                if (couple.UsedStorageBytes > Constants.Album.MaxStoragePerCoupleBytes)
+                    return ApiResponse<MemoryDto>.Fail("Dung lượng lưu trữ của Couple đã vượt quá giới hạn 1GB.");
+            }
+
+            var mediaItems = new List<MemoryMediaItem>();
+
+            for (int i = 0; i < newFiles.Count; i++)
+            {
+                var file = newFiles[i];
+                var uploadResult = await _storage.UploadAsync(file, $"CoupleSpace/{memory.CoupleId}", ct);
+                
+                if (i == 0)
+                {
+                    primaryUrl = uploadResult.PublicUrl;
+                }
+
+                mediaItems.Add(new MemoryMediaItem
+                {
+                    StoragePath = uploadResult.StoragePath,
+                    MimeType = file.ContentType,
+                    OriginalFileName = file.FileName,
+                    FileSizeBytes = file.Length
+                });
+            }
+
+            var firstFile = newFiles[0];
+            var firstUpload = mediaItems[0];
+
+            memory.StoragePath = firstUpload.StoragePath;
+            memory.OriginalFileName = firstFile.FileName;
+            memory.MimeType = firstFile.ContentType;
+            memory.FileSizeBytes = firstFile.Length;
+            memory.AdditionalMediaJson = System.Text.Json.JsonSerializer.Serialize(mediaItems);
+
+            additionalUrls = mediaItems.Select(x => _storage.GetPublicUrl(x.StoragePath)).ToList();
+        }
+        else
+        {
+            // Just return existing URLs if no new files
+            if (!string.IsNullOrEmpty(memory.AdditionalMediaJson))
+            {
+                var extraMedia = System.Text.Json.JsonSerializer.Deserialize<List<MemoryMediaItem>>(memory.AdditionalMediaJson);
+                if (extraMedia != null)
+                {
+                    additionalUrls = extraMedia.Select(x => _storage.GetPublicUrl(x.StoragePath)).ToList();
+                    primaryUrl = additionalUrls.FirstOrDefault() ?? string.Empty;
+                }
+            }
+            else
+            {
+                primaryUrl = _storage.GetPublicUrl(memory.StoragePath);
+                additionalUrls.Add(primaryUrl);
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+        if (memory.Couple != null) await _cache.RemoveAsync($"couple:{memory.Couple.Id}", ct);
+
+        var user = await _db.Users.FindAsync([memory.UploadedByUserId], ct);
+        var uploaderName = user?.DisplayName ?? "Ẩn danh";
+
+        return ApiResponse<MemoryDto>.Ok(new MemoryDto(
+            memory.Id, 
+            primaryUrl, 
+            memory.Caption, 
+            memory.SortOrder, 
+            memory.MimeType, 
+            memory.CreatedAt, 
+            uploaderName,
+            additionalUrls));
     }
 
     private async Task<bool> IsPartnerAsync(Guid coupleId, Guid userId, CancellationToken ct)

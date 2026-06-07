@@ -12,10 +12,29 @@ namespace TouchLove.API.Controllers.Admin;
 public class AdminStoreController : ControllerBase
 {
     private readonly AdminStoreService _adminStoreService;
+    private readonly TouchLove.Application.Interfaces.IFileStorageService _storageService;
 
-    public AdminStoreController(AdminStoreService adminStoreService)
+    public AdminStoreController(AdminStoreService adminStoreService, TouchLove.Application.Interfaces.IFileStorageService storageService)
     {
         _adminStoreService = adminStoreService;
+        _storageService = storageService;
+    }
+
+    [HttpPost("upload-image")]
+    public async Task<IActionResult> UploadImage([FromForm] IFormFile file, [FromForm] string type, CancellationToken ct)
+    {
+        if (file == null) return BadRequest(ApiResponse<string>.Fail("Vui lòng chọn file."));
+        
+        string folder = type switch
+        {
+            "Products" => "eCommerce/Products",
+            "Promotions" => "eCommerce/Promotions",
+            "Home" => "eCommerce/Home",
+            _ => "eCommerce/Others"
+        };
+        
+        var result = await _storageService.UploadAsync(file, folder, ct);
+        return Ok(ApiResponse<string>.Ok(result.PublicUrl));
     }
 
     [HttpGet("suppliers")]
