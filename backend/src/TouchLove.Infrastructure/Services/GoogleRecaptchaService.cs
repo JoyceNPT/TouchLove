@@ -33,6 +33,12 @@ public class GoogleRecaptchaService : ICaptchaService
         if (string.IsNullOrEmpty(token)) return false;
 
         var secretKey = _config["Recaptcha:SecretKey"];
+        if (string.IsNullOrEmpty(secretKey))
+        {
+            _logger.LogWarning("reCAPTCHA bypassed because SecretKey is missing or empty in configuration");
+            return true;
+        }
+
         var response = await _httpClient.PostAsync(
             "https://www.google.com/recaptcha/api/siteverify",
             new FormUrlEncodedContent(new Dictionary<string, string>
