@@ -1,4 +1,4 @@
-using TouchLove.Application.Common;
+using TouchLove.Shared;
 using TouchLove.Domain.Entities;
 
 namespace TouchLove.Application.Features.CartService;

@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using TouchLove.Application.Common;
+using TouchLove.Shared;
 using TouchLove.Application.Interfaces;
 using TouchLove.Domain.Entities;
 using System.Text.Json;
@@ -26,7 +26,7 @@ public class CartService : ICartService
         {
             cart = new Cart { UserId = userId };
             _db.Carts.Add(cart);
-            await _db.Database.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(ct);
         }
 
         var dto = new CartDto(cart.Id, cart.Items.Select(i => new CartItemDto(
@@ -70,7 +70,7 @@ public class CartService : ICartService
             }
         }
 
-        await _db.Database.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct);
 
         return await GetCartAsync(userId, ct);
     }
