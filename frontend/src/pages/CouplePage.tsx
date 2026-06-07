@@ -908,6 +908,7 @@ const CouplePage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.07 }}
                         className="relative rounded-2xl overflow-hidden group shadow-lg cursor-pointer break-inside-avoid"
+                      >
                         {/* Media Display */}
                         <div 
                           className="w-full h-full cursor-pointer overflow-hidden"
