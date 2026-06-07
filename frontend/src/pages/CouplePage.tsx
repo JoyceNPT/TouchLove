@@ -258,6 +258,7 @@ const CouplePage = () => {
   const [editingMemory, setEditingMemory] = useState<CoupleData['memories'][0] | null>(null);
   const [memoryToDelete, setMemoryToDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isPublic, setIsPublic] = useState(true);
   const [isAlbumPublic, setIsAlbumPublic] = useState(true);
   const [isAnniversariesPublic, setIsAnniversariesPublic] = useState(true);
   const [isAchievementsPublic, setIsAchievementsPublic] = useState(true);
