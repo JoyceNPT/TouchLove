@@ -33,6 +33,8 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user, accessToken) => {
         localStorage.setItem('accessToken', accessToken);
         set({ user, accessToken, isAuthenticated: true });
+        // Fetch cart from backend after login
+        useCartStore.getState().fetchFromBackend();
       },
       setToken: (accessToken) => {
         localStorage.setItem('accessToken', accessToken);

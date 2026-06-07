@@ -121,6 +121,7 @@ try
     builder.Services.AddScoped<TouchLove.Application.Features.Voucher.IVoucherService, TouchLove.Application.Features.Voucher.VoucherService>();
     builder.Services.AddScoped<TouchLove.Application.Features.Voucher.IVoucherAdminService, TouchLove.Application.Features.Voucher.VoucherAdminService>();
     builder.Services.AddScoped<TouchLove.Application.Features.Policy.IPolicyService, TouchLove.Application.Features.Policy.PolicyService>();
+    builder.Services.AddScoped<TouchLove.Application.Features.CartService.ICartService, TouchLove.Application.Features.CartService.CartService>();
 
     // ── Infrastructure Services ───────────────────────────────────────
     var storageProvider = builder.Configuration["Storage:Provider"] ?? "Local";

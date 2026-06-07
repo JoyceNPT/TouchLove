@@ -207,13 +207,24 @@ public class StoreService
         return ApiResponse<OrderDto>.Ok(new OrderDto(order.Id, order.OrderNumber, order.TotalAmount, order.Status, order.PaymentStatus, order.CreatedAt));
     }
 
-    public async Task<ApiResponse<string>> ConfirmPendingOrderAsync(string transactionId, CancellationToken ct = default)
+    public async Task<ApiResponse<string>> CancelPendingOrderAsync(string orderNumber, CancellationToken ct = default)
+    {
+        var pending = await _db.PendingOrders.FirstOrDefaultAsync(p => p.OrderNumber == orderNumber, ct);
+        if (pending != null)
+        {
+            _db.PendingOrders.Remove(pending);
+            await _db.SaveChangesAsync(ct);
+        }
+        return ApiResponse<string>.Ok("Hủy giao dịch thành công.");
+    }
+
+    public async Task<ApiResponse<string>> ConfirmPendingOrderAsync(string orderNumber, CancellationToken ct = default)
     {
         var pending = await _db.PendingOrders
-            .FirstOrDefaultAsync(p => p.TransactionId == transactionId, ct);
+            .FirstOrDefaultAsync(p => p.OrderNumber == orderNumber, ct);
 
         if (pending == null)
-            return ApiResponse<string>.Fail("Transaction không tồn tại hoặc đã được xử lý.");
+            return ApiResponse<string>.Fail("Đơn hàng không tồn tại hoặc đã được xử lý.");
 
         if (pending.ExpiresAt < DateTime.UtcNow)
         {
@@ -255,7 +266,7 @@ public class StoreService
             Items = orderItems,
             Status = OrderStatus.Confirmed,
             PaymentStatus = PaymentStatus.Paid,
-            TransactionId = transactionId
+            TransactionId = pending.TransactionId
         };
 
         _db.Orders.Add(order);

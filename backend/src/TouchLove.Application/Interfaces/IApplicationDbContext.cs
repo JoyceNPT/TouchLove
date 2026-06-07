@@ -23,6 +23,8 @@ public interface IApplicationDbContext
     DbSet<Product> Products { get; }
     DbSet<Order> Orders { get; }
     DbSet<OrderItem> OrderItems { get; }
+    DbSet<Cart> Carts { get; }
+    DbSet<CartItem> CartItems { get; }
     DbSet<AnniversaryReminder> AnniversaryReminders { get; }
     DbSet<Voucher> Vouchers { get; }
     DbSet<VoucherRedemption> VoucherRedemptions { get; }

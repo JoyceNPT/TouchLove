@@ -26,6 +26,8 @@ public class AppDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>, I
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<Cart> Carts => Set<Cart>();
+    public DbSet<CartItem> CartItems => Set<CartItem>();
     public DbSet<AnniversaryReminder> AnniversaryReminders => Set<AnniversaryReminder>();
     public DbSet<Voucher> Vouchers => Set<Voucher>();
     public DbSet<VoucherRedemption> VoucherRedemptions => Set<VoucherRedemption>();

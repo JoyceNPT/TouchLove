@@ -29,7 +29,8 @@ const CheckoutPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderInfo, setOrderInfo] = useState<any>(null);
-  const [timer, setTimer] = useState(30);
+  const [timer, setTimer] = useState(300);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [voucherCode, setVoucherCode] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [voucherError, setVoucherError] = useState<string | null>(null);
@@ -42,6 +43,21 @@ const CheckoutPage = () => {
 
   const paymentMethod = watch('paymentMethod');
 
+  const handleCancelPayment = async (isTimeout = false) => {
+    if (!orderInfo?.orderNumber) {
+      setStep('form');
+      return;
+    }
+    try {
+      if (isTimeout) alert('Giao dịch đã hết thời gian chờ!');
+      await axiosInstance.post(`/store/orders/cancel-payment/${orderInfo.orderNumber}`);
+      setStep('form');
+    } catch (err) {
+      console.error(err);
+      setStep('form');
+    }
+  };
+
   useEffect(() => {
     let interval: any;
     if (step === 'payment' && timer > 0) {
@@ -49,16 +65,28 @@ const CheckoutPage = () => {
         setTimer(t => t - 1);
       }, 1000);
     } else if (step === 'payment' && timer === 0) {
-      // Mock result logic: 1 product type -> Success, >1 -> Failure
-      if (items.length === 1) {
+      handleCancelPayment(true);
+    }
+    return () => clearInterval(interval);
+  }, [step, timer]);
+
+  const handleConfirmPayment = async () => {
+    if (!orderInfo?.orderNumber) return;
+    setIsConfirming(true);
+    try {
+      const res = await axiosInstance.post(`/store/orders/confirm-payment/${orderInfo.orderNumber}`);
+      if (res.data.success) {
         clearCart();
         setStep('success');
       } else {
-        setStep('failure');
+        alert(res.data.message || 'Xác nhận thất bại');
       }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Lỗi hệ thống khi xác nhận');
+    } finally {
+      setIsConfirming(false);
     }
-    return () => clearInterval(interval);
-  }, [step, timer, items.length, clearCart]);
+  };
 
   const applyVoucher = async () => {
     if (!voucherCode.trim()) return;
@@ -311,42 +339,55 @@ const CheckoutPage = () => {
                   <h3 className="font-bold flex items-center gap-2 text-primary">
                     <Building2 className="w-5 h-5" /> Thông tin chuyển khoản dự phòng
                   </h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-6">
                     <div>
                       <p className="text-muted-foreground">Ngân hàng</p>
                       <p className="font-bold">MB Bank (Quân Đội)</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Số tài khoản</p>
-                      <p className="font-bold">0901 234 567</p>
+                      <p className="font-bold">190220039</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Chủ tài khoản</p>
-                      <p className="font-bold uppercase">NGO THANH PHONG</p>
+                      <p className="font-bold uppercase">NGO PHUOC THINH</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Số tiền</p>
                       <p className="font-bold text-primary">{finalPrice.toLocaleString('vi-VN')}đ</p>
                     </div>
                   </div>
-                  <div className="p-3 bg-primary/10 rounded-xl text-xs font-medium text-primary text-center">
-                    Nội dung: <span className="font-black">TouchLove {orderInfo?.orderNumber}</span>
+
+                  <div className="flex flex-col gap-3 mt-6">
+                    <button
+                      onClick={handleConfirmPayment}
+                      disabled={isConfirming}
+                      className="w-full py-4 bg-primary text-white rounded-2xl font-bold hover:opacity-90 active:scale-95 transition-all flex justify-center items-center gap-2 shadow-lg shadow-primary/20"
+                    >
+                      {isConfirming ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Tôi đã chuyển khoản'}
+                    </button>
+                    <button
+                      onClick={() => handleCancelPayment(false)}
+                      disabled={isConfirming}
+                      className="w-full py-4 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-2xl font-bold hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-all"
+                    >
+                      Hủy giao dịch
+                    </button>
                   </div>
                </div>
 
                 <div className="flex flex-col items-center gap-4 py-4">
                   <div className="flex items-center gap-3 text-primary animate-pulse">
                     <Loader2 className="w-6 h-6 animate-spin" />
-                    <span className="font-black uppercase tracking-widest text-sm">Đang kiểm tra thanh toán...</span>
+                    <span className="font-black uppercase tracking-widest text-sm">Đang chờ bạn thanh toán...</span>
                   </div>
                   <div className="text-4xl font-black text-zinc-300">
-                    {timer}s
+                    {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
                   </div>
                 </div>
 
                 <p className="text-xs text-muted-foreground px-8">
-                  Hệ thống đang tự động kiểm tra trạng thái thanh toán. 
-                  Vui lòng không đóng trình duyệt hoặc chuyển trang.
+                  Hệ thống sẽ tự động hủy giao dịch sau 5 phút nếu không nhận được xác nhận.
                 </p>
             </div>
           </motion.div>
@@ -386,20 +427,16 @@ const CheckoutPage = () => {
               <XCircle className="w-12 h-12" />
             </div>
             <h1 className="text-5xl font-black mb-4">Thanh toán thất bại</h1>
-            <p className="text-xl text-muted-foreground mb-4">Hệ thống không thể xác nhận giao dịch của bạn.</p>
-            <p className="text-muted-foreground mb-12">
-              Lưu ý: Để test tính năng thành công, giỏ hàng chỉ được phép có 1 loại sản phẩm. 
-              Hiện tại bạn có {items.length} loại sản phẩm.
-            </p>
+            <p className="text-xl text-muted-foreground mb-12">Hệ thống không thể xác nhận giao dịch của bạn hoặc giao dịch đã bị hủy.</p>
             
             <button
               onClick={() => {
                 setStep('form');
-                setTimer(30);
+                setTimer(300);
               }}
               className="px-12 py-5 bg-primary text-white rounded-full font-black text-lg hover:scale-110 transition-all shadow-xl"
             >
-              Quay lại giỏ hàng
+              Thử lại
             </button>
           </motion.div>
         )}

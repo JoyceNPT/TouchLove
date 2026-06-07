@@ -3,14 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Mail, Lock, User as UserIcon, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 
 const registerSchema = z.object({
   displayName: z.string().min(2, 'Tên hiển thị phải từ 2 ký tự'),
   email: z.string().email('Email không hợp lệ'),
-  password: z.string().min(8, 'Mật khẩu phải từ 8 ký tự'),
+  password: z.string().min(8, 'Mật khẩu phải từ 8 ký tự')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,}$/, 'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt'),
   confirmPassword: z.string(),
+
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Mật khẩu xác nhận không khớp",
   path: ["confirmPassword"],
@@ -24,6 +26,8 @@ const Register = () => {
   const [details, setDetails] = useState<string[]>([]);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -133,37 +137,51 @@ const Register = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium px-1">Mật khẩu</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-3.5 w-5 h-5 text-muted-foreground" />
-              <input
-                {...register('password')}
-                type="password"
-                className={`w-full bg-secondary/50 border-0 rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-primary transition-all outline-none ${
-                  errors.password ? 'ring-2 ring-destructive' : ''
-                }`}
-                placeholder="••••••••"
-              />
+            <div className="space-y-2">
+              <label className="text-sm font-medium px-1">Mật khẩu</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-3.5 w-5 h-5 text-muted-foreground" />
+                <input
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  className={`w-full bg-secondary/50 border-0 rounded-2xl py-3.5 pl-12 pr-12 focus:ring-2 focus:ring-primary transition-all outline-none ${
+                    errors.password ? 'ring-2 ring-destructive' : ''
+                  }`}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-xs text-destructive px-1">{errors.password.message}</p>}
             </div>
-            {errors.password && <p className="text-xs text-destructive px-1">{errors.password.message}</p>}
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium px-1">Xác nhận</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-3.5 w-5 h-5 text-muted-foreground" />
-              <input
-                {...register('confirmPassword')}
-                type="password"
-                className={`w-full bg-secondary/50 border-0 rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-primary transition-all outline-none ${
-                  errors.confirmPassword ? 'ring-2 ring-destructive' : ''
-                }`}
-                placeholder="••••••••"
-              />
+            <div className="space-y-2">
+              <label className="text-sm font-medium px-1">Xác nhận</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-3.5 w-5 h-5 text-muted-foreground" />
+                <input
+                  {...register('confirmPassword')}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  className={`w-full bg-secondary/50 border-0 rounded-2xl py-3.5 pl-12 pr-12 focus:ring-2 focus:ring-primary transition-all outline-none ${
+                    errors.confirmPassword ? 'ring-2 ring-destructive' : ''
+                  }`}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {errors.confirmPassword && <p className="text-xs text-destructive px-1">{errors.confirmPassword.message}</p>}
             </div>
-            {errors.confirmPassword && <p className="text-xs text-destructive px-1">{errors.confirmPassword.message}</p>}
-          </div>
         </div>
 
         <button

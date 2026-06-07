@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import axiosInstance from '../api/axiosInstance';
 
 export interface CartItem {
   id: string;
@@ -19,6 +20,8 @@ interface CartState {
   totalItems: () => number;
   totalPrice: () => number;
   syncCartItems: (products: any[]) => void;
+  syncWithBackend: () => Promise<void>;
+  fetchFromBackend: () => Promise<void>;
 }
 
 export const useCartStore = create<CartState>()(
@@ -37,9 +40,11 @@ export const useCartStore = create<CartState>()(
         } else {
           set({ items: [...currentItems, { ...product, quantity: 1 }] });
         }
+        get().syncWithBackend();
       },
       removeItem: (id) => {
         set({ items: get().items.filter((i) => i.id !== id) });
+        get().syncWithBackend();
       },
       updateQuantity: (id, quantity) => {
         if (quantity < 1) return;
@@ -48,8 +53,12 @@ export const useCartStore = create<CartState>()(
             i.id === id ? { ...i, quantity } : i
           ),
         });
+        get().syncWithBackend();
       },
-      clearCart: () => set({ items: [] }),
+      clearCart: () => {
+        set({ items: [] });
+        get().syncWithBackend();
+      },
       totalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
       totalPrice: () => get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
       syncCartItems: (products: any[]) => {
@@ -88,6 +97,53 @@ export const useCartStore = create<CartState>()(
 
         if (hasChanges) {
            set({ items: updatedItems });
+           get().syncWithBackend();
+        }
+      },
+      syncWithBackend: async () => {
+        try {
+          if (!localStorage.getItem('accessToken')) return;
+          const currentItems = get().items;
+          const itemsPayload = currentItems.map(i => ({ productId: i.id, quantity: i.quantity }));
+          const res = await axiosInstance.post('/cart/sync', itemsPayload);
+          
+          if (res.data.success) {
+            const serverItems = res.data.data.items;
+            const formattedItems = serverItems.map((i: any) => ({
+              id: i.productId,
+              name: i.productName,
+              price: i.price,
+              quantity: i.quantity,
+              stockQuantity: i.stockQuantity,
+              imageUrl: i.productImage
+            }));
+            
+            // Only update if the lengths are different or there are stock changes, 
+            // to avoid resetting the store constantly while typing/clicking
+            set({ items: formattedItems });
+          }
+        } catch (error) {
+          console.error('Failed to sync cart with backend:', error);
+        }
+      },
+      fetchFromBackend: async () => {
+        try {
+          if (!localStorage.getItem('accessToken')) return;
+          const res = await axiosInstance.get('/cart');
+          if (res.data.success) {
+            const serverItems = res.data.data.items;
+            const formattedItems = serverItems.map((i: any) => ({
+              id: i.productId,
+              name: i.productName,
+              price: i.price,
+              quantity: i.quantity,
+              stockQuantity: i.stockQuantity,
+              imageUrl: i.productImage
+            }));
+            set({ items: formattedItems });
+          }
+        } catch (error) {
+          console.error('Failed to fetch cart from backend:', error);
         }
       },
     }),

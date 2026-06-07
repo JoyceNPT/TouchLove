@@ -50,7 +50,7 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
       {/* Navigation */}
-      <header className="sticky top-0 z-50 glass border-b">
+      <header className="fixed top-0 left-0 right-0 z-50 glass border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 group">
             <Heart className="w-8 h-8 text-primary fill-primary group-hover:scale-110 transition-transform" />
@@ -174,7 +174,7 @@ const MainLayout = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 pt-16">
         <Outlet />
       </main>
 

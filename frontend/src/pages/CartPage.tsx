@@ -70,9 +70,9 @@ const CartPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <h1 className="text-4xl font-black mb-10 flex items-center gap-4">
+      <h1 className="text-2xl md:text-4xl font-black mb-10 flex items-center gap-4">
         Giỏ hàng của bạn
-        <span className="text-lg font-medium text-muted-foreground bg-secondary px-4 py-1 rounded-full">
+        <span className="text-sm md:text-lg font-medium text-muted-foreground bg-secondary px-4 py-1 rounded-full">
           {totalItems()} sản phẩm
         </span>
       </h1>

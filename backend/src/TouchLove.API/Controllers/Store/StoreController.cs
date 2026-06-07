@@ -49,11 +49,17 @@ public class StoreController : ControllerBase
         return Ok(await _storeService.PlaceOrderAsync(userId, req, ct));
     }
 
-    [HttpPost("orders/confirm-payment/{transactionId}")]
-    public async Task<IActionResult> ConfirmPayment(string transactionId, CancellationToken ct)
+    [HttpPost("orders/confirm-payment/{orderNumber}")]
+    public async Task<IActionResult> ConfirmPayment(string orderNumber, CancellationToken ct)
     {
         // Typically this would be a webhook from a payment provider, 
         // but for now we expose it so frontend or admin can call it.
-        return Ok(await _storeService.ConfirmPendingOrderAsync(transactionId, ct));
+        return Ok(await _storeService.ConfirmPendingOrderAsync(orderNumber, ct));
+    }
+
+    [HttpPost("orders/cancel-payment/{orderNumber}")]
+    public async Task<IActionResult> CancelPendingPayment(string orderNumber, CancellationToken ct)
+    {
+        return Ok(await _storeService.CancelPendingOrderAsync(orderNumber, ct));
     }
 }
