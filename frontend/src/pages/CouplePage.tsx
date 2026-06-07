@@ -822,10 +822,10 @@ const CouplePage = () => {
           transition={{ delay: 0.2 }}
           className="glass p-5 sm:p-8 lg:p-10 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl border-primary/10 relative overflow-hidden group"
         >
-          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
             <Star className="w-16 h-16 text-primary" />
           </div>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 relative z-10">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-primary/10 rounded-xl">
                 <MessageSquare className="w-6 h-6 text-primary" />
