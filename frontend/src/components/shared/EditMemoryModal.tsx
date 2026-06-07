@@ -274,4 +274,4 @@ const EditMemoryModal: React.FC<EditMemoryModalProps> = ({ isOpen, onClose, memo
   );
 };
 
-export default PhotoUploadModal;
+export default EditMemoryModal;
