@@ -25,7 +25,8 @@ import {
   GitBranch,
   Images,
   User,
-  Globe
+  Globe,
+  Trash2
 } from 'lucide-react';
 import axios from '../api/axiosInstance';
 import * as signalR from '@microsoft/signalr';
