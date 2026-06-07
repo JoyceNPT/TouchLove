@@ -45,9 +45,14 @@ interface CoupleData {
   startDate: string;
   avatarUrl?: string;
   partnerAvatarUrl?: string;
+  myName?: string;
+  myDisplayName?: string;
   partnerName?: string;
+  partnerDisplayName?: string;
   partnerAName?: string;
   partnerBName?: string;
+  partnerADisplayName?: string;
+  partnerBDisplayName?: string;
   description?: string;
   nfcScanCount: number;
   todayMessage?: string;
@@ -341,9 +346,22 @@ const CouplePage = () => {
       if (response.data.success) {
         const cd = response.data.data;
         cd.memories = cd.recentMemories || [];
-        cd.avatarUrl = cd.avatarAUrl;
-        cd.partnerAvatarUrl = cd.avatarBUrl;
-        cd.partnerName = cd.partnerBName;
+        
+        if (user && user.id === cd.partnerBUserId) {
+          cd.avatarUrl = cd.avatarBUrl;
+          cd.partnerAvatarUrl = cd.avatarAUrl;
+          cd.myName = cd.partnerBName;
+          cd.myDisplayName = cd.partnerBDisplayName;
+          cd.partnerName = cd.partnerAName;
+          cd.partnerDisplayName = cd.partnerADisplayName;
+        } else {
+          cd.avatarUrl = cd.avatarAUrl;
+          cd.partnerAvatarUrl = cd.avatarBUrl;
+          cd.myName = cd.partnerAName;
+          cd.myDisplayName = cd.partnerADisplayName;
+          cd.partnerName = cd.partnerBName;
+          cd.partnerDisplayName = cd.partnerBDisplayName;
+        }
 
         setData(cd);
         setIsPublic(cd.isPublic);
@@ -638,7 +656,7 @@ const CouplePage = () => {
             {/* Left Avatar */}
             <div className="relative z-10 flex flex-col items-center gap-1 hover:scale-105 transition-transform duration-300">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white dark:border-zinc-800 shadow-2xl overflow-hidden bg-muted relative group ring-4 ring-primary/10">
-                {data.avatarUrl ? <img src={data.avatarUrl} alt="You" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-primary/40 bg-primary/5">{getInitials(user?.displayName || 'Bạn')}</div>}
+                {data.avatarUrl ? <img src={data.avatarUrl} alt="You" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-primary/40 bg-primary/5">{getInitials(data.myDisplayName || data.myName || 'Bạn')}</div>}
               </div>
             </div>
 
@@ -658,7 +676,7 @@ const CouplePage = () => {
             {/* Right Avatar */}
             <div className="relative z-10 flex flex-col items-center gap-1 hover:scale-105 transition-transform duration-300">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white dark:border-zinc-800 shadow-2xl overflow-hidden bg-muted relative group ring-4 ring-primary/10">
-                {data.partnerAvatarUrl ? <img src={data.partnerAvatarUrl} alt={data.partnerName} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-primary/40 bg-primary/5">{getInitials(data.partnerName)}</div>}
+                {data.partnerAvatarUrl ? <img src={data.partnerAvatarUrl} alt={data.partnerName} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-primary/40 bg-primary/5">{getInitials(data.partnerDisplayName || data.partnerName || 'Partner')}</div>}
               </div>
             </div>
           </div>
