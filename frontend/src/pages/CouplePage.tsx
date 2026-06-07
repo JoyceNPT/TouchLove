@@ -255,6 +255,7 @@ const CouplePage = () => {
 
   // Privacy toggles states
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [editingMemory, setEditingMemory] = useState<CoupleData['memories'][0] | null>(null);
   const [memoryToDelete, setMemoryToDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -269,6 +270,7 @@ const CouplePage = () => {
 
   // Compute Ownership
   const isOwner = !!user && !!data && (user.id === data.partnerAUserId || user.id === data.partnerBUserId);
+  const isPartner = isOwner;
 
   // Build display names: prefer nickname
   const coupleDisplayName = data
