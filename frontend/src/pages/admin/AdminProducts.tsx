@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Package, Plus, Trash2, Edit, AlertCircle, Loader2, ChevronRight, PackageCheck, PackageX } from 'lucide-react';
+import { Package, Plus, Trash2, Edit, AlertCircle, Loader2, ChevronRight, PackageCheck, PackageX, X, UploadCloud } from 'lucide-react';
 import { axiosInstance } from '../../api/axiosInstance';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from '../../store/useToastStore';
@@ -116,6 +116,45 @@ const AdminProducts = () => {
       setFormData({ name: '', description: '', costPrice: 0, price: 0, stockQuantity: 0, supplierId: '', imageUrls: '[]' });
     }
     setIsModalOpen(true);
+  };
+
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      uploadData.append('type', 'Products');
+
+      const res = await axiosInstance.post('/admin/store/upload-image', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (res.data.success) {
+        const url = res.data.data;
+        const currentUrls = JSON.parse(formData.imageUrls || '[]');
+        currentUrls.push(url);
+        setFormData({ ...formData, imageUrls: JSON.stringify(currentUrls) });
+        toast.success('Tải ảnh lên thành công');
+      } else {
+        toast.error(res.data.message || 'Lỗi tải ảnh');
+      }
+    } catch (err) {
+      toast.error('Lỗi khi tải ảnh lên');
+    } finally {
+      setIsUploadingImage(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const currentUrls = JSON.parse(formData.imageUrls || '[]');
+    currentUrls.splice(index, 1);
+    setFormData({ ...formData, imageUrls: JSON.stringify(currentUrls) });
   };
 
   const handleSubmitModal = async (e: React.FormEvent) => {
@@ -257,8 +296,8 @@ const AdminProducts = () => {
               ))}
             </tbody>
           </table>
-    </div>
         </div>
+      </div>
 
       <ConfirmModal
         isOpen={isConfirmOpen}
@@ -310,6 +349,28 @@ const AdminProducts = () => {
                 <label className="block text-sm font-medium text-zinc-500 mb-1">Mô tả</label>
                 <textarea rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent" />
               </div>
+
+              {/* Hình ảnh */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 mb-2">Hình ảnh sản phẩm</label>
+                <div className="flex flex-wrap gap-4">
+                  {JSON.parse(formData.imageUrls || '[]').map((url: string, idx: number) => (
+                    <div key={idx} className="relative w-24 h-24 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden group shadow-sm hover:shadow-md transition-all">
+                      <img src={url} alt="Product" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    {isUploadingImage ? <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" /> : <UploadCloud className="w-6 h-6 text-zinc-400" />}
+                    <span className="text-[10px] text-zinc-500 font-medium mt-1">Tải ảnh lên</span>
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isUploadingImage} />
+                  </label>
+                </div>
+              </div>
+
               <div className="flex justify-end gap-3 mt-8">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-zinc-600 hover:bg-zinc-100">Hủy</button>
                 <button type="submit" className="px-6 py-3 rounded-xl font-bold bg-primary text-white hover:opacity-90">Lưu sản phẩm</button>
