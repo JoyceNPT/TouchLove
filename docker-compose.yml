@@ -37,7 +37,7 @@ services:
       Email__Port: 1025
       Google__ClientId: ${TOUCHLOVE_GOOGLE_CLIENT_ID}
       Google__ClientSecret: ${TOUCHLOVE_GOOGLE_CLIENT_SECRET}
-      Frontend__Url: http://13.236.186.178
+      Frontend__Url: https://touchlove.id.vn
       Storage__Provider: S3
       Storage__S3__AccessKey: ""
       Storage__S3__SecretKey: ""
