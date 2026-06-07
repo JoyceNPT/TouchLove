@@ -303,6 +303,15 @@ const CouplePage = () => {
     }
   };
 
+  const handleUploadSuccess = (newMemory: any) => {
+    if (data) {
+      setData({
+        ...data,
+        memories: [newMemory, ...data.memories]
+      });
+    }
+  };
+
   const handleDeleteMemory = async () => {
     if (!memoryToDelete || !data) return;
     try {
@@ -1173,6 +1182,37 @@ const CouplePage = () => {
         onClose={() => setIsUploadModalOpen(false)}
         coupleId={data.id}
         onSuccess={handleUploadSuccess}
+      />
+
+      {/* Edit Memory Modal */}
+      {editingMemory && (
+        <EditMemoryModal
+          isOpen={!!editingMemory}
+          onClose={() => setEditingMemory(null)}
+          memory={editingMemory}
+          onSuccess={(updatedMemory) => {
+            setData(prev => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                memories: prev.memories.map(m => m.id === updatedMemory.id ? updatedMemory : m)
+              };
+            });
+            setEditingMemory(null);
+          }}
+        />
+      )}
+
+      {/* Delete Confirm Modal */}
+      <ConfirmModal
+        isOpen={!!memoryToDelete}
+        onClose={() => setMemoryToDelete(null)}
+        onConfirm={handleDeleteMemory}
+        title="Xóa Kỷ Niệm"
+        message="Bạn có chắc chắn muốn xóa kỷ niệm này? Kỷ niệm này sẽ bị xóa vĩnh viễn và không thể khôi phục."
+        confirmText="Xóa"
+        cancelText="Hủy"
+        isDestructive={true}
       />
 
       {/* Memory Carousel Modal */}
