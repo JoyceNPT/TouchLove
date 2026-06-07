@@ -55,12 +55,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: "http://13.236.186.178:5000/api"
+        VITE_API_URL: "https://api.touchlove.id.vn/api"
     container_name: touchlove-frontend
     ports:
       - "80:3000"
     environment:
-      VITE_API_URL: http://13.236.186.178:5000
+      VITE_API_URL: "https://api.touchlove.id.vn/api"
     depends_on:
       - backend
 
