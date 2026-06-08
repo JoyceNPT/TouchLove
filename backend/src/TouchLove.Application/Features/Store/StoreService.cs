@@ -176,7 +176,7 @@ public class StoreService
             var paymentData = new CreatePaymentLinkRequest {
                 OrderCode = orderCode,
                 Amount = (int)totalAmount,
-                Description = $"Thanh toan {orderCode}",
+                Description = orderNumber,
                 Items = items,
                 CancelUrl = cancelUrl,
                 ReturnUrl = returnUrl
