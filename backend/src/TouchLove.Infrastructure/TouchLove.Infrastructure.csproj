@@ -7,7 +7,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.7.400" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.24.1" />
     <PackageReference Include="Google.Apis.Auth">
       <Version>1.74.0</Version>
     </PackageReference>
