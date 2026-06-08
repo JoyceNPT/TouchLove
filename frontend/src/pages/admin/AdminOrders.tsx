@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ShoppingBag, Search, Filter, Eye, CheckCircle2, XCircle, Clock, Truck, ChevronRight, RefreshCw } from 'lucide-react';
 import { axiosInstance } from '../../api/axiosInstance';
 import { motion } from 'framer-motion';
+import { toast } from '../../store/useToastStore';
 
 interface Order {
   id: string;
@@ -74,11 +75,15 @@ const AdminOrders = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (res.data.success) {
+        toast.success('Xác nhận hoàn tiền thành công.');
         setOrders(orders.map(o => o.id === refundOrderId ? { ...o, status: 7 } : o));
         setRefundOrderId(null);
         setRefundFile(null);
+      } else {
+        toast.error(res.data.message || 'Có lỗi xảy ra.');
       }
-    } catch (err) {
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Không thể upload hóa đơn.');
       console.error('Failed to submit refund', err);
     } finally {
       setIsUploading(false);

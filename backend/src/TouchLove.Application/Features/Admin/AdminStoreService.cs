@@ -167,13 +167,15 @@ public class AdminStoreService
         return ApiResponse<string>.Ok("Cập nhật trạng thái đơn hàng thành công.");
     }
 
-    public async Task<ApiResponse<string>> RefundOrderAsync(Guid orderId, string refundBillUrl, CancellationToken ct = default)
+    public async Task<ApiResponse<string>> RefundOrderAsync(Guid orderId, Microsoft.AspNetCore.Http.IFormFile file, CancellationToken ct = default)
     {
         var order = await _db.Orders.FindAsync(new object[] { orderId }, ct);
         if (order == null) return ApiResponse<string>.Fail("Đơn hàng không tồn tại.");
 
+        var uploadResult = await _storage.UploadAsync(file, $"eCommerce/Management/Refund/{order.OrderNumber}", ct);
+
         order.Status = OrderStatus.Refunded;
-        order.RefundBillUrl = refundBillUrl;
+        order.RefundBillUrl = uploadResult.PublicUrl;
         
         await _db.SaveChangesAsync(ct);
         return ApiResponse<string>.Ok("Xác nhận hoàn tiền thành công.");

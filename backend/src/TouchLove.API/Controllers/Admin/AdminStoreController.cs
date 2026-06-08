@@ -74,10 +74,7 @@ public class AdminStoreController : ControllerBase
     {
         if (file == null) return BadRequest(ApiResponse<string>.Fail("Vui lòng chọn hình ảnh hoá đơn hoàn tiền."));
         
-        var uploadResult = await _storageService.UploadAsync(file, "Admin/RefundBills/Order", ct);
-        
-        // Pass the URL to the service to update the order
-        var result = await _adminStoreService.RefundOrderAsync(id, uploadResult.PublicUrl, ct);
+        var result = await _adminStoreService.RefundOrderAsync(id, file, ct);
         return Ok(result);
     }
 }
