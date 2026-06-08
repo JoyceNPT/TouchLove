@@ -462,7 +462,15 @@ public static class DataSeeder
             }
         }
 
-        await context.SaveChangesAsync();
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DataSeeder] Failed to seed products: {ex.Message}");
+            context.ChangeTracker.Clear();
+        }
 
         // ── Order 9: App Policies ────────────────────────────────────
         var policies = new List<AppPolicy>
