@@ -53,20 +53,29 @@ public class CartService : ICartService
             _db.Carts.Add(cart);
         }
 
-        // Update cart items
-        _db.CartItems.RemoveRange(cart.Items);
-        cart.Items.Clear();
+        // Remove items not in the new list
+        var productIds = items.Select(i => i.ProductId).ToList();
+        var toRemove = cart.Items.Where(i => !productIds.Contains(i.ProductId)).ToList();
+        foreach (var i in toRemove) { cart.Items.Remove(i); _db.CartItems.Remove(i); }
 
         foreach (var item in items)
         {
-            var productExists = await _db.Products.AnyAsync(p => p.Id == item.ProductId && !p.IsDeleted, ct);
-            if (productExists)
+            var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == item.ProductId);
+            if (existingItem != null)
             {
-                cart.Items.Add(new CartItem
+                existingItem.Quantity = item.Quantity;
+            }
+            else
+            {
+                var productExists = await _db.Products.AnyAsync(p => p.Id == item.ProductId && !p.IsDeleted, ct);
+                if (productExists)
                 {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity
-                });
+                    cart.Items.Add(new CartItem
+                    {
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity
+                    });
+                }
             }
         }
 

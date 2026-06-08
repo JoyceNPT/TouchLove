@@ -35,7 +35,7 @@ public class S3FileStorageService : IFileStorageService
         return new AmazonS3Client(accessKey, secretKey, regionEndpoint);
     }
 
-    public async Task<FileUploadResult> UploadAsync(IFormFile file, string folder, CancellationToken ct = default)
+    public async Task<FileUploadResult> UploadAsync(IFormFile file, string folder, string? customFileName = null, CancellationToken ct = default)
     {
         var mime = file.ContentType;
         var ext = Path.GetExtension(file.FileName).TrimStart('.').ToLower();
@@ -53,7 +53,8 @@ public class S3FileStorageService : IFileStorageService
         }
 
         var bucketName = _config["Storage:S3:BucketName"] ?? "touchlove-bucket";
-        var fileKey = $"{folder}/{Guid.NewGuid()}.{ext}".Replace("\\", "/").TrimStart('/');
+        var fileName = string.IsNullOrEmpty(customFileName) ? $"{Guid.NewGuid()}.{ext}" : customFileName;
+        var fileKey = $"{folder}/{fileName}".Replace("\\", "/").TrimStart('/');
 
         using var client = GetClient();
         using var stream = file.OpenReadStream();

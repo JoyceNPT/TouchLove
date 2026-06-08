@@ -5,7 +5,7 @@ namespace TouchLove.Application.Interfaces;
 
 public interface IFileStorageService
 {
-    Task<FileUploadResult> UploadAsync(IFormFile file, string folder, CancellationToken ct = default);
+    Task<FileUploadResult> UploadAsync(IFormFile file, string folder, string? customFileName = null, CancellationToken ct = default);
     Task DeleteAsync(string fileIdentifier, CancellationToken ct = default);
     Task DeleteByUrlAsync(string publicUrl, CancellationToken ct = default);
     string GetPublicUrl(string fileIdentifier);

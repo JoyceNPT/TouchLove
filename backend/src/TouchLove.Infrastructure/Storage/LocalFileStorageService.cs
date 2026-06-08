@@ -22,7 +22,7 @@ public class LocalFileStorageService : IFileStorageService
         _env = env;
     }
 
-    public async Task<FileUploadResult> UploadAsync(IFormFile file, string folder, CancellationToken ct = default)
+    public async Task<FileUploadResult> UploadAsync(IFormFile file, string folder, string? customFileName = null, CancellationToken ct = default)
     {
         var mime = await DetectMimeTypeAsync(file, ct);
         if (!AllowedMimeTypes.Contains(mime))
@@ -38,7 +38,7 @@ public class LocalFileStorageService : IFileStorageService
             _ => "bin"
         };
 
-        var fileName = $"{Guid.NewGuid()}.{ext}";
+        var fileName = string.IsNullOrEmpty(customFileName) ? $"{Guid.NewGuid()}.{ext}" : customFileName;
         var relativePath = Path.Combine("uploads", folder, fileName).Replace("\\", "/");
         var absolutePath = Path.Combine(_env.WebRootPath, "uploads", folder, fileName);
 
