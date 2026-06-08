@@ -22,7 +22,17 @@ public class LocalFileStorageService : IFileStorageService
         _env = env;
     }
 
-    public async Task<FileUploadResult> UploadAsync(IFormFile file, string folder, string? customFileName = null, CancellationToken ct = default)
+    public async Task<FileUploadResult> UploadAsync(IFormFile file, string folder, CancellationToken ct = default)
+    {
+        return await UploadInternalAsync(file, folder, null, ct);
+    }
+
+    public async Task<FileUploadResult> UploadWithCustomNameAsync(IFormFile file, string folder, string customFileName, CancellationToken ct = default)
+    {
+        return await UploadInternalAsync(file, folder, customFileName, ct);
+    }
+
+    private async Task<FileUploadResult> UploadInternalAsync(IFormFile file, string folder, string? customFileName, CancellationToken ct = default)
     {
         var mime = await DetectMimeTypeAsync(file, ct);
         if (!AllowedMimeTypes.Contains(mime))

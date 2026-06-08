@@ -172,7 +172,7 @@ public class AdminStoreService
         var order = await _db.Orders.FindAsync(new object[] { orderId }, ct);
         if (order == null) return ApiResponse<string>.Fail("Đơn hàng không tồn tại.");
 
-        var uploadResult = await _storage.UploadAsync(file, $"eCommerce/Management/Refund/{order.OrderNumber}", file.FileName, ct);
+        var uploadResult = await _storage.UploadWithCustomNameAsync(file, $"eCommerce/Management/Refund/{order.OrderNumber}", file.FileName, ct);
 
         order.Status = OrderStatus.Refunded;
         order.RefundBillUrl = uploadResult.PublicUrl;

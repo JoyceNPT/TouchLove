@@ -35,7 +35,17 @@ public class S3FileStorageService : IFileStorageService
         return new AmazonS3Client(accessKey, secretKey, regionEndpoint);
     }
 
-    public async Task<FileUploadResult> UploadAsync(IFormFile file, string folder, string? customFileName = null, CancellationToken ct = default)
+    public async Task<FileUploadResult> UploadAsync(IFormFile file, string folder, CancellationToken ct = default)
+    {
+        return await UploadInternalAsync(file, folder, null, ct);
+    }
+
+    public async Task<FileUploadResult> UploadWithCustomNameAsync(IFormFile file, string folder, string customFileName, CancellationToken ct = default)
+    {
+        return await UploadInternalAsync(file, folder, customFileName, ct);
+    }
+
+    private async Task<FileUploadResult> UploadInternalAsync(IFormFile file, string folder, string? customFileName, CancellationToken ct = default)
     {
         var mime = file.ContentType;
         var ext = Path.GetExtension(file.FileName).TrimStart('.').ToLower();
