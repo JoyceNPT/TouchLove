@@ -36,6 +36,9 @@ public class Order : BaseEntity
     public string? TransactionId { get; set; }
     
     public string? Notes { get; set; }
+
+    [MaxLength(500)]
+    public string? RefundBillUrl { get; set; }
     
     // Navigation
     public ICollection<OrderItem> Items { get; set; } = [];

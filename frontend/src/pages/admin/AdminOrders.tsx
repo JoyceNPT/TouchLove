@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShoppingBag, Search, Filter, Eye, CheckCircle2, XCircle, Clock, Truck, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Search, Filter, Eye, CheckCircle2, XCircle, Clock, Truck, ChevronRight, RefreshCw } from 'lucide-react';
 import { axiosInstance } from '../../api/axiosInstance';
 import { motion } from 'framer-motion';
 
@@ -20,12 +20,16 @@ const ORDER_STATUS = [
   { label: 'Đang giao', color: 'bg-orange-500', text: 'text-white', icon: Truck },
   { label: 'Hoàn thành', color: 'bg-green-500', text: 'text-white', icon: CheckCircle2 },
   { label: 'Đã hủy', color: 'bg-red-500', text: 'text-white', icon: XCircle },
-  { label: 'Đã hoàn tiền', color: 'bg-zinc-500', text: 'text-white', icon: XCircle },
+  { label: 'Chờ hoàn tiền', color: 'bg-orange-500', text: 'text-white', icon: Clock },
+  { label: 'Đã hoàn tiền', color: 'bg-zinc-500', text: 'text-white', icon: CheckCircle2 },
 ];
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refundOrderId, setRefundOrderId] = useState<string | null>(null);
+  const [refundFile, setRefundFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -43,6 +47,11 @@ const AdminOrders = () => {
   }, []);
 
   const handleUpdateStatus = async (id: string, status: number) => {
+    if (status === 7) {
+      setRefundOrderId(id);
+      return;
+    }
+    
     try {
       const res = await axiosInstance.patch(`/admin/store/orders/${id}/status`, status, {
         headers: { 'Content-Type': 'application/json' }
@@ -52,6 +61,27 @@ const AdminOrders = () => {
       }
     } catch (err) {
       console.error('Failed to update status', err);
+    }
+  };
+
+  const submitRefund = async () => {
+    if (!refundOrderId || !refundFile) return;
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', refundFile);
+      const res = await axiosInstance.post(`/admin/store/orders/${refundOrderId}/refund`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data.success) {
+        setOrders(orders.map(o => o.id === refundOrderId ? { ...o, status: 7 } : o));
+        setRefundOrderId(null);
+        setRefundFile(null);
+      }
+    } catch (err) {
+      console.error('Failed to submit refund', err);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -167,6 +197,45 @@ const AdminOrders = () => {
           </table>
         </div>
       </div>
+
+      {/* Refund Modal */}
+      {refundOrderId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isUploading && setRefundOrderId(null)} />
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }} 
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative bg-white dark:bg-zinc-900 rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-zinc-200 dark:border-zinc-800"
+          >
+            <h3 className="text-2xl font-black mb-4">Xác nhận hoàn tiền</h3>
+            <p className="text-muted-foreground mb-6">Vui lòng tải lên hình ảnh hoá đơn chuyển khoản hoàn tiền cho khách hàng.</p>
+            
+            <input 
+              type="file" 
+              accept="image/*"
+              onChange={(e) => setRefundFile(e.target.files?.[0] || null)}
+              className="mb-6 w-full text-sm text-zinc-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-black file:uppercase file:tracking-widest file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer"
+            />
+            
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setRefundOrderId(null)}
+                disabled={isUploading}
+                className="flex-1 py-3 px-4 rounded-xl bg-secondary font-black uppercase tracking-widest text-xs hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={submitRefund}
+                disabled={!refundFile || isUploading}
+                className="flex-1 py-3 px-4 rounded-xl bg-primary text-white font-black uppercase tracking-widest text-xs hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/30"
+              >
+                {isUploading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Xác nhận'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

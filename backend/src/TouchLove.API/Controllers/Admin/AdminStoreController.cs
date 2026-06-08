@@ -68,4 +68,16 @@ public class AdminStoreController : ControllerBase
     [HttpPatch("orders/{id:guid}/status")]
     public async Task<IActionResult> UpdateOrderStatus(Guid id, [FromBody] OrderStatus status, CancellationToken ct)
         => Ok(await _adminStoreService.UpdateOrderStatusAsync(id, status, ct));
+
+    [HttpPost("orders/{id:guid}/refund")]
+    public async Task<IActionResult> RefundOrder(Guid id, [FromForm] IFormFile file, CancellationToken ct)
+    {
+        if (file == null) return BadRequest(ApiResponse<string>.Fail("Vui lòng chọn hình ảnh hoá đơn hoàn tiền."));
+        
+        var uploadResult = await _storageService.UploadAsync(file, "Admin/RefundBills/Order", ct);
+        
+        // Pass the URL to the service to update the order
+        var result = await _adminStoreService.RefundOrderAsync(id, uploadResult.PublicUrl, ct);
+        return Ok(result);
+    }
 }

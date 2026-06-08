@@ -41,7 +41,7 @@ public class CartService : ICartService
         return ApiResponse<CartDto>.Ok(dto);
     }
 
-    public async Task<ApiResponse<CartDto>> SyncCartAsync(Guid userId, List<SyncCartItemDto> items, CancellationToken ct = default)
+        public async Task<ApiResponse<CartDto>> SyncCartAsync(Guid userId, List<SyncCartItemDto> items, CancellationToken ct = default)
     {
         var cart = await _db.Carts
             .Include(c => c.Items)
@@ -53,20 +53,24 @@ public class CartService : ICartService
             _db.Carts.Add(cart);
         }
 
-        // Update cart items
-        _db.CartItems.RemoveRange(cart.Items);
-        cart.Items.Clear();
-
         foreach (var item in items)
         {
             var productExists = await _db.Products.AnyAsync(p => p.Id == item.ProductId && !p.IsDeleted, ct);
             if (productExists)
             {
-                cart.Items.Add(new CartItem
+                var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == item.ProductId);
+                if (existingItem != null)
                 {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity
-                });
+                    existingItem.Quantity += item.Quantity; // Merge quantity
+                }
+                else
+                {
+                    cart.Items.Add(new CartItem
+                    {
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity
+                    });
+                }
             }
         }
 

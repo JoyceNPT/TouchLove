@@ -28,6 +28,7 @@ const UserOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -44,12 +45,17 @@ const UserOrders = () => {
     fetchOrders();
   }, []);
 
-  const handleCancel = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
+  const handleCancelClick = (id: string) => {
+    setOrderToCancel(id);
+  };
+
+  const confirmCancel = async () => {
+    if (!orderToCancel) return;
     try {
-      const res = await axiosInstance.post(`/store/orders/${id}/cancel`);
+      const res = await axiosInstance.post(`/store/orders/${orderToCancel}/cancel`);
       if (res.data.success) {
         toast.success('Đã gửi yêu cầu hủy đơn hàng.');
+        setOrderToCancel(null);
         fetchOrders();
       } else {
         toast.error(res.data.message);
@@ -154,7 +160,7 @@ const UserOrders = () => {
                         <div className="flex flex-col sm:flex-row gap-4 pt-4">
                           {canCancel && (
                             <button 
-                              onClick={() => handleCancel(order.id)}
+                              onClick={() => handleCancelClick(order.id)}
                               className="flex-1 px-6 py-4 rounded-2xl bg-destructive/10 text-destructive font-black uppercase tracking-widest text-xs hover:bg-destructive hover:text-white transition-all flex items-center justify-center gap-2 border border-destructive/20"
                             >
                               <XCircle className="w-4 h-4" /> Hủy đơn hàng
@@ -173,6 +179,49 @@ const UserOrders = () => {
           })}
         </div>
       )}
+
+      {/* Confirm Cancel Modal */}
+      <AnimatePresence>
+        {orderToCancel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setOrderToCancel(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white dark:bg-zinc-900 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-zinc-200 dark:border-zinc-800 text-center"
+            >
+              <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black mb-2">Hủy đơn hàng?</h3>
+              <p className="text-muted-foreground mb-8">
+                Bạn có chắc chắn muốn hủy đơn hàng này không? Hành động này không thể hoàn tác.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setOrderToCancel(null)}
+                  className="flex-1 px-6 py-4 rounded-2xl bg-secondary font-black uppercase tracking-widest text-xs hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                >
+                  Đóng
+                </button>
+                <button
+                  onClick={confirmCancel}
+                  className="flex-1 px-6 py-4 rounded-2xl bg-destructive text-white font-black uppercase tracking-widest text-xs hover:bg-destructive/90 transition-all shadow-lg shadow-destructive/30"
+                >
+                  Xác nhận
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

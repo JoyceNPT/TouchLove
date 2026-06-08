@@ -166,6 +166,18 @@ public class AdminStoreService
         await _db.SaveChangesAsync(ct);
         return ApiResponse<string>.Ok("Cập nhật trạng thái đơn hàng thành công.");
     }
+
+    public async Task<ApiResponse<string>> RefundOrderAsync(Guid orderId, string refundBillUrl, CancellationToken ct = default)
+    {
+        var order = await _db.Orders.FindAsync(new object[] { orderId }, ct);
+        if (order == null) return ApiResponse<string>.Fail("Đơn hàng không tồn tại.");
+
+        order.Status = OrderStatus.Refunded;
+        order.RefundBillUrl = refundBillUrl;
+        
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse<string>.Ok("Xác nhận hoàn tiền thành công.");
+    }
 }
 
 public record CreateProductRequest(string Name, string? Description, decimal CostPrice, decimal Price, int StockQuantity, Guid? SupplierId, string? ImageUrls);

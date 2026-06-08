@@ -219,7 +219,7 @@ const Home = () => {
               <div className="aspect-square glass rounded-[3rem] overflow-hidden shadow-2xl flex items-center justify-center p-8 bg-gradient-to-br from-primary/10 to-pink-500/10">
                 <Heart className="w-48 h-48 text-primary/20 animate-pulse absolute" />
                 <img 
-                  src="https://touchlove-bucket.s3.ap-southeast-2.amazonaws.com/eCommerce/Home/CoupleHomePage.jpg" 
+                  src="https://d3qob24l10t88c.cloudfront.net/eCommerce/Home/CoupleHomePage.jpg" 
                   alt="Couple illustration"
                   className="rounded-[2rem] shadow-lg relative z-10 hover:scale-105 transition-transform duration-500"
                 />
