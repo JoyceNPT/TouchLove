@@ -4,6 +4,9 @@ using TouchLove.Domain.Entities;
 using TouchLove.Domain.Enums;
 using System.Text.Json;
 using TouchLove.Shared;
+using PayOS;
+using PayOS.Models.V2.PaymentRequests;
+using Microsoft.Extensions.Configuration;
 
 namespace TouchLove.Application.Features.Store;
 
@@ -12,12 +15,16 @@ public class StoreService
     private readonly IApplicationDbContext _db;
     private readonly ICacheService _cache;
     private readonly TouchLove.Application.Features.Voucher.IVoucherService _voucherService;
+    private readonly PayOSClient _payOS;
+    private readonly IConfiguration _config;
 
-    public StoreService(IApplicationDbContext db, ICacheService cache, TouchLove.Application.Features.Voucher.IVoucherService voucherService)
+    public StoreService(IApplicationDbContext db, ICacheService cache, TouchLove.Application.Features.Voucher.IVoucherService voucherService, PayOSClient payOS, IConfiguration config)
     {
         _db = db;
         _cache = cache;
         _voucherService = voucherService;
+        _payOS = payOS;
+        _config = config;
     }
 
     public async Task<ApiResponse<List<ProductDto>>> GetProductsAsync(CancellationToken ct = default)
@@ -144,20 +151,39 @@ public class StoreService
         if (req.PaymentMethod?.ToUpper() == "QR")
         {
             var payload = JsonSerializer.Serialize(req);
+            int orderCode = int.Parse(DateTime.Now.ToString("ddHHmmss")); // max 31235959
+            
             var pendingOrder = new PendingOrder
             {
                 OrderNumber = orderNumber,
                 CustomerId = userId,
                 PayloadJson = payload,
                 TotalAmount = totalAmount,
-                TransactionId = Guid.NewGuid().ToString("N"),
+                TransactionId = orderCode.ToString(),
                 ExpiresAt = DateTime.UtcNow.AddMinutes(15)
             };
             _db.PendingOrders.Add(pendingOrder);
             await _db.SaveChangesAsync(ct);
             
-            // Return orderNumber instead of id, the frontend can poll or wait for webhook
-            return ApiResponse<OrderDto>.Ok(new OrderDto(Guid.Empty, orderNumber, totalAmount, OrderStatus.Pending, PaymentStatus.Unpaid, DateTime.UtcNow));
+            // Create PayOS link
+            var frontendUrl = _config["Frontend:Url"] ?? "http://localhost:3000";
+            var cancelUrl = $"{frontendUrl}/checkout?cancel=true&order={orderNumber}";
+            var returnUrl = $"{frontendUrl}/checkout?success=true&order={orderNumber}";
+            
+            var items = new List<PaymentLinkItem> { 
+                new PaymentLinkItem { Name = $"Don hang {orderNumber}", Quantity = 1, Price = (int)totalAmount } 
+            };
+            var paymentData = new CreatePaymentLinkRequest {
+                OrderCode = orderCode,
+                Amount = (int)totalAmount,
+                Description = $"Thanh toan {orderNumber}",
+                Items = items,
+                CancelUrl = cancelUrl,
+                ReturnUrl = returnUrl
+            };
+            var createPayment = await _payOS.PaymentRequests.CreateAsync(paymentData);
+            
+            return ApiResponse<OrderDto>.Ok(new OrderDto(Guid.Empty, orderNumber, totalAmount, OrderStatus.Pending, PaymentStatus.Unpaid, DateTime.UtcNow, createPayment.CheckoutUrl));
         }
 
         // For COD, subtract stock and create Order directly
@@ -214,10 +240,10 @@ public class StoreService
         return ApiResponse<string>.Ok("Hủy giao dịch thành công.");
     }
 
-    public async Task<ApiResponse<string>> ConfirmPendingOrderAsync(string orderNumber, CancellationToken ct = default)
+    public async Task<ApiResponse<string>> ConfirmPendingOrderAsync(string transactionId, CancellationToken ct = default)
     {
         var pending = await _db.PendingOrders
-            .FirstOrDefaultAsync(p => p.OrderNumber == orderNumber, ct);
+            .FirstOrDefaultAsync(p => p.TransactionId == transactionId, ct);
 
         if (pending == null)
             return ApiResponse<string>.Fail("Đơn hàng không tồn tại hoặc đã được xử lý.");
@@ -277,4 +303,4 @@ public class StoreService
 public record ProductDto(Guid Id, string Name, string Slug, string? Description, decimal Price, int StockQuantity, string? ImageUrls);
 public record PlaceOrderRequest(string ShippingFullName, string ShippingPhone, string ShippingAddress, string PaymentMethod, string? Notes, List<CartItemRequest> Items, string? VoucherCode = null);
 public record CartItemRequest(Guid ProductId, int Quantity);
-public record OrderDto(Guid Id, string OrderNumber, decimal TotalAmount, OrderStatus Status, PaymentStatus PaymentStatus, DateTime CreatedAt);
+public record OrderDto(Guid Id, string OrderNumber, decimal TotalAmount, OrderStatus Status, PaymentStatus PaymentStatus, DateTime CreatedAt, string? CheckoutUrl = null);

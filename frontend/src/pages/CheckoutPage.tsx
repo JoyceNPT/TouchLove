@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CreditCard, Truck, ShieldCheck, CheckCircle2, AlertCircle, QrCode, Building2, XCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/authStore';
 import { useToastStore } from '../store/useToastStore';
@@ -24,6 +24,7 @@ type CheckoutForm = z.infer<typeof checkoutSchema>;
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { items, totalPrice, clearCart } = useCartStore();
   const { user } = useAuthStore();
   const { addToast } = useToastStore();
@@ -44,6 +45,25 @@ const CheckoutPage = () => {
   });
 
   const paymentMethod = watch('paymentMethod');
+
+  useEffect(() => {
+    // Handle PayOS return URL
+    const isSuccess = searchParams.get('success');
+    const isCancel = searchParams.get('cancel');
+    const orderNumber = searchParams.get('order');
+
+    if (isSuccess === 'true') {
+      clearCart();
+      setStep('success');
+      setOrderInfo({ orderNumber });
+      // Remove query params
+      setSearchParams({});
+    } else if (isCancel === 'true') {
+      addToast('Bạn đã hủy thanh toán.', 'error');
+      setStep('form');
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams, clearCart, addToast]);
 
   const handleCancelPayment = async (isTimeout = false) => {
     if (!orderInfo?.orderNumber) {
@@ -130,7 +150,12 @@ const CheckoutPage = () => {
       if (res.data.success) {
         setOrderInfo(res.data.data);
         if (data.paymentMethod === 'QR') {
-          setStep('payment');
+          if (res.data.data.checkoutUrl) {
+            window.location.href = res.data.data.checkoutUrl;
+          } else {
+            addToast('Không thể tạo mã thanh toán PayOS. Vui lòng thử lại.', 'error');
+            setStep('form');
+          }
         } else {
           setStep('success');
           clearCart();

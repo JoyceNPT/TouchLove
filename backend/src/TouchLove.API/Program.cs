@@ -1,3 +1,4 @@
+using PayOS;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -35,6 +36,11 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+
+    if (!builder.Environment.IsDevelopment())
+    {
+        builder.Configuration.AddSystemsManager("/TouchLove/Production/");
+    }
 
     // ── Serilog ───────────────────────────────────────────────────────
     builder.Host.UseSerilog((ctx, lc) => lc
@@ -122,6 +128,13 @@ try
     builder.Services.AddScoped<TouchLove.Application.Features.Voucher.IVoucherAdminService, TouchLove.Application.Features.Voucher.VoucherAdminService>();
     builder.Services.AddScoped<TouchLove.Application.Features.Policy.IPolicyService, TouchLove.Application.Features.Policy.PolicyService>();
     builder.Services.AddScoped<TouchLove.Application.Features.CartService.ICartService, TouchLove.Application.Features.CartService.CartService>();
+
+    // ── PayOS ─────────────────────────────────────────────────────────
+    builder.Services.AddSingleton(new PayOSClient(new PayOSOptions {
+        ClientId = builder.Configuration["PayOS:ClientId"] ?? "",
+        ApiKey = builder.Configuration["PayOS:ApiKey"] ?? "",
+        ChecksumKey = builder.Configuration["PayOS:ChecksumKey"] ?? ""
+    }));
 
     // ── Infrastructure Services ───────────────────────────────────────
     var storageProvider = builder.Configuration["Storage:Provider"] ?? "Local";

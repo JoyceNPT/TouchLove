@@ -140,7 +140,34 @@ export const useCartStore = create<CartState>()(
               stockQuantity: i.stockQuantity,
               imageUrl: i.productImage
             }));
-            set({ items: formattedItems });
+
+            const localItems = get().items;
+            if (localItems.length === 0) {
+              set({ items: formattedItems });
+            } else {
+              // Merge items
+              const merged = [...localItems];
+              let hasChanges = false;
+              for (const si of formattedItems) {
+                const existing = merged.find(i => i.id === si.id);
+                if (existing) {
+                  if (existing.quantity !== si.quantity) {
+                    existing.quantity = Math.max(existing.quantity, si.quantity);
+                    hasChanges = true;
+                  }
+                } else {
+                  merged.push(si);
+                  hasChanges = true;
+                }
+              }
+
+              if (hasChanges || localItems.length > formattedItems.length) {
+                set({ items: merged });
+                get().syncWithBackend();
+              } else {
+                set({ items: formattedItems });
+              }
+            }
           }
         } catch (error) {
           console.error('Failed to fetch cart from backend:', error);

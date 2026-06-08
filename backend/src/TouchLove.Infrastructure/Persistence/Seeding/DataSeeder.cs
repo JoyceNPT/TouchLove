@@ -456,7 +456,7 @@ public static class DataSeeder
 
         foreach (var p in productsToSeed)
         {
-            if (!await context.Products.AnyAsync(x => x.Slug == p.Slug))
+            if (!await context.Products.IgnoreQueryFilters().AnyAsync(x => x.Slug == p.Slug))
             {
                 context.Products.Add(p);
             }
