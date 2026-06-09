@@ -39,7 +39,9 @@ public class RevenueService : IRevenueService
             .Where(vr => orderIds.Contains(vr.OrderId))
             .ToListAsync(ct);
 
-        var redemptionsDict = redemptions.ToDictionary(vr => vr.OrderId, vr => vr);
+        var redemptionsDict = redemptions
+            .GroupBy(vr => vr.OrderId)
+            .ToDictionary(g => g.Key, g => g.First());
 
         decimal totalGrossRevenue = 0;
         decimal totalCostOfGoods = 0;

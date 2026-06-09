@@ -112,9 +112,10 @@ const AdminRevenue = () => {
     }
   };
 
-  if (isLoading && !report) return <div className="h-96 animate-pulse bg-white dark:bg-zinc-900 rounded-[2.5rem]" />;
+  if (isLoading) return <div className="h-96 animate-pulse bg-white dark:bg-zinc-900 rounded-[2.5rem]" />;
+  if (!report) return <div className="text-center p-12 text-zinc-500 font-bold">Không có dữ liệu báo cáo. Vui lòng thử lại.</div>;
 
-  const s = report?.summary;
+  const s = report.summary;
 
   return (
     <div className="space-y-8">
