@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -10,7 +11,9 @@ import {
   ChevronRight,
   ShoppingBag,
   Package,
-  Ticket
+  Ticket,
+  Menu,
+  X
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
@@ -18,6 +21,7 @@ const AdminLayout = () => {
   const { user, clearAuth } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     clearAuth();
@@ -37,20 +41,34 @@ const AdminLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
-            <Heart className="w-6 h-6 fill-current" />
+      <aside className={`fixed md:sticky top-0 z-50 h-screen w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+              <Heart className="w-6 h-6 fill-current" />
+            </div>
+            <span className="text-xl font-black tracking-tight">Admin<span className="text-primary">Love</span></span>
           </div>
-          <span className="text-xl font-black tracking-tight">Admin<span className="text-primary">Love</span></span>
+          <button className="md:hidden p-2 bg-zinc-100 rounded-lg" onClick={() => setIsSidebarOpen(false)}>
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
+              onClick={() => setIsSidebarOpen(false)}
               className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
                 location.pathname === item.path
                   ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
@@ -87,25 +105,30 @@ const AdminLayout = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <header className="h-16 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md sticky top-0 z-30 px-8 flex items-center justify-between">
-          <h2 className="text-lg font-bold">
-            {navItems.find(i => i.path === location.pathname)?.label || 'Admin Panel'}
-          </h2>
-          <div className="flex items-center gap-4">
+      <main className="flex-1 flex flex-col min-w-0">
+        <header className="h-16 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md sticky top-0 z-30 px-4 md:px-8 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <button className="md:hidden p-2 bg-white rounded-lg border shadow-sm" onClick={() => setIsSidebarOpen(true)}>
+              <Menu className="w-5 h-5" />
+            </button>
+            <h2 className="text-lg font-bold truncate hidden sm:block">
+              {navItems.find(i => i.path === location.pathname)?.label || 'Admin Panel'}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2 md:gap-4">
             <Link 
               to="/profile" 
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-xs font-black transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-xs font-black transition-all whitespace-nowrap"
             >
-              <Users className="w-4 h-4" /> Quay lại Profile
+              <Users className="w-4 h-4" /> <span className="hidden sm:inline">Quay lại Profile</span>
             </Link>
-            <div className="p-2 glass rounded-lg cursor-pointer">
+            <div className="p-2 glass rounded-lg cursor-pointer hidden sm:block">
               <Settings className="w-5 h-5" />
             </div>
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 md:p-8 flex-1 overflow-auto">
           <Outlet />
         </div>
       </main>

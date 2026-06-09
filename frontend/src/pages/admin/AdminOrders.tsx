@@ -8,6 +8,9 @@ interface Order {
   id: string;
   orderNumber: string;
   customerName: string;
+  shippingFullName: string;
+  shippingPhone: string;
+  shippingAddress: string;
   totalAmount: number;
   status: number;
   paymentStatus: number;
@@ -31,6 +34,7 @@ const AdminOrders = () => {
   const [refundOrderId, setRefundOrderId] = useState<string | null>(null);
   const [refundFile, setRefundFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -190,7 +194,11 @@ const AdminOrders = () => {
                             </select>
                             <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rotate-90 pointer-events-none text-zinc-400" />
                          </div>
-                         <button className="p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-primary/10 hover:text-primary rounded-xl transition-all" title="Xem chi tiết">
+                         <button 
+                           onClick={() => setSelectedOrder(order)}
+                           className="p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-primary/10 hover:text-primary rounded-xl transition-all" 
+                           title="Xem chi tiết"
+                         >
                            <Eye className="w-5 h-5" />
                          </button>
                       </div>
@@ -202,6 +210,45 @@ const AdminOrders = () => {
           </table>
         </div>
       </div>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedOrder(null)} />
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }} 
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative bg-white dark:bg-zinc-900 rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-zinc-200 dark:border-zinc-800"
+          >
+            <h3 className="text-2xl font-black mb-6">Chi tiết đơn hàng</h3>
+            <div className="space-y-4 mb-6">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-1">Mã đơn</span>
+                <span className="font-black text-primary">#{selectedOrder.orderNumber}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-1">Họ tên người nhận</span>
+                <span className="font-bold">{selectedOrder.shippingFullName || selectedOrder.customerName}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-1">Số điện thoại</span>
+                <span className="font-bold">{selectedOrder.shippingPhone || 'Không có'}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-1">Địa chỉ giao hàng</span>
+                <span className="font-bold">{selectedOrder.shippingAddress || 'Không có'}</span>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setSelectedOrder(null)}
+              className="w-full py-3 px-4 rounded-xl bg-secondary font-black uppercase tracking-widest text-xs hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+            >
+              Đóng
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       {/* Refund Modal */}
       {refundOrderId && (

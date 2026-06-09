@@ -151,7 +151,7 @@ public class AdminStoreService
 
         var orders = await query
             .OrderByDescending(o => o.CreatedAt)
-            .Select(o => new AdminOrderDto(o.Id, o.OrderNumber, o.Customer != null ? o.Customer.DisplayName : "Ẩn danh", o.TotalAmount, o.Status, o.PaymentStatus, o.CreatedAt))
+            .Select(o => new AdminOrderDto(o.Id, o.OrderNumber, o.Customer != null ? o.Customer.DisplayName : "Ẩn danh", o.ShippingFullName, o.ShippingPhone, o.ShippingAddress, o.TotalAmount, o.Status, o.PaymentStatus, o.CreatedAt))
             .ToListAsync(ct);
 
         return ApiResponse<List<AdminOrderDto>>.Ok(orders);
@@ -185,4 +185,4 @@ public class AdminStoreService
 public record CreateProductRequest(string Name, string? Description, decimal CostPrice, decimal Price, int StockQuantity, Guid? SupplierId, string? ImageUrls);
 public record SupplierDto(Guid Id, string Name, string? Phone, string? Email, string? Address);
 public record AdminProductDto(Guid Id, string Name, string Slug, string? Description, string? ImageUrls, Guid? SupplierId, decimal CostPrice, decimal Price, int StockQuantity, string SupplierName, bool IsActive);
-public record AdminOrderDto(Guid Id, string OrderNumber, string CustomerName, decimal TotalAmount, OrderStatus Status, PaymentStatus PaymentStatus, DateTime CreatedAt);
+public record AdminOrderDto(Guid Id, string OrderNumber, string CustomerName, string ShippingFullName, string ShippingPhone, string ShippingAddress, decimal TotalAmount, OrderStatus Status, PaymentStatus PaymentStatus, DateTime CreatedAt);

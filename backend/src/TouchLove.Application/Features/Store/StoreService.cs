@@ -129,8 +129,10 @@ public class StoreService
             var orderItem = new OrderItem
             {
                 ProductId = product.Id,
+                ProductName = product.Name,
                 Quantity = item.Quantity,
-                UnitPrice = product.Price
+                UnitPrice = product.Price,
+                CostPrice = product.CostPrice
             };
             orderItems.Add(orderItem);
             totalAmount += orderItem.TotalPrice;
@@ -270,8 +272,10 @@ public class StoreService
             orderItems.Add(new OrderItem
             {
                 ProductId = product.Id,
+                ProductName = product.Name,
                 Quantity = item.Quantity,
-                UnitPrice = product.Price
+                UnitPrice = product.Price,
+                CostPrice = product.CostPrice
             });
         }
 

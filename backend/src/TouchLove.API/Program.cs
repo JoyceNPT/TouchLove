@@ -128,6 +128,8 @@ try
     builder.Services.AddScoped<TouchLove.Application.Features.Voucher.IVoucherAdminService, TouchLove.Application.Features.Voucher.VoucherAdminService>();
     builder.Services.AddScoped<TouchLove.Application.Features.Policy.IPolicyService, TouchLove.Application.Features.Policy.PolicyService>();
     builder.Services.AddScoped<TouchLove.Application.Features.CartService.ICartService, TouchLove.Application.Features.CartService.CartService>();
+    builder.Services.AddScoped<TouchLove.Application.Features.Revenue.IRevenueService, TouchLove.Application.Features.Revenue.RevenueService>();
+    builder.Services.AddScoped<TouchLove.Application.Features.Revenue.ExcelExportService>();
 
     // ── PayOS ─────────────────────────────────────────────────────────
     builder.Services.AddSingleton(new PayOSClient(new PayOSOptions {
