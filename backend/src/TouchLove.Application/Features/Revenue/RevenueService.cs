@@ -26,14 +26,25 @@ public class RevenueService : IRevenueService
             var query = _db.Orders
                 .Include(o => o.Items)
                 .Where(o => 
-                    (o.PaymentMethod == "QR" && o.PaymentStatus == PaymentStatus.Paid) ||
-                    (o.PaymentMethod == "COD" && o.Status == OrderStatus.Completed)
+                    o.Status != OrderStatus.Cancelled && 
+                    o.Status != OrderStatus.WaitingForRefund && 
+                    o.Status != OrderStatus.Refunded &&
+                    (
+                        (o.PaymentMethod == "QR" && o.PaymentStatus == PaymentStatus.Paid) ||
+                        (o.PaymentMethod == "COD" && o.Status == OrderStatus.Completed)
+                    )
                 );
 
-        if (req.StartDate.HasValue)
-            query = query.Where(o => o.CreatedAt >= req.StartDate.Value);
-        if (req.EndDate.HasValue)
-            query = query.Where(o => o.CreatedAt <= req.EndDate.Value);
+            if (req.StartDate.HasValue)
+            {
+                var startUtc = DateTime.SpecifyKind(req.StartDate.Value.Date, DateTimeKind.Utc);
+                query = query.Where(o => o.CreatedAt >= startUtc);
+            }
+            if (req.EndDate.HasValue)
+            {
+                var endUtc = DateTime.SpecifyKind(req.EndDate.Value.Date, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
+                query = query.Where(o => o.CreatedAt <= endUtc);
+            }
 
         var orders = await query.ToListAsync(ct);
         var orderIds = orders.Select(o => o.Id).ToList();

@@ -44,13 +44,13 @@ const AdminLayout = () => {
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed md:sticky top-0 z-50 h-screen w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <aside className={`fixed lg:sticky top-0 z-50 h-screen w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
@@ -58,7 +58,7 @@ const AdminLayout = () => {
             </div>
             <span className="text-xl font-black tracking-tight">Admin<span className="text-primary">Love</span></span>
           </div>
-          <button className="md:hidden p-2 bg-zinc-100 rounded-lg" onClick={() => setIsSidebarOpen(false)}>
+          <button className="lg:hidden p-2 bg-zinc-100 rounded-lg" onClick={() => setIsSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -108,14 +108,14 @@ const AdminLayout = () => {
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md sticky top-0 z-30 px-4 md:px-8 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <button className="md:hidden p-2 bg-white rounded-lg border shadow-sm" onClick={() => setIsSidebarOpen(true)}>
+            <button className="lg:hidden p-2 bg-white rounded-lg border shadow-sm" onClick={() => setIsSidebarOpen(true)}>
               <Menu className="w-5 h-5" />
             </button>
             <h2 className="text-lg font-bold truncate hidden sm:block">
               {navItems.find(i => i.path === location.pathname)?.label || 'Admin Panel'}
             </h2>
           </div>
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2 lg:gap-4">
             <Link 
               to="/profile" 
               className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-xs font-black transition-all whitespace-nowrap"
@@ -128,7 +128,7 @@ const AdminLayout = () => {
           </div>
         </header>
 
-        <div className="p-4 md:p-8 flex-1 overflow-auto">
+        <div className="p-4 lg:p-8 flex-1 overflow-auto">
           <Outlet />
         </div>
       </main>
