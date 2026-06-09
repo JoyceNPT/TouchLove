@@ -36,7 +36,15 @@ public class AdminService
             TotalMemories: await _db.Memories.IgnoreQueryFilters().CountAsync(ct),
             TotalOrders: await _db.Orders.CountAsync(o => o.Status >= TouchLove.Domain.Enums.OrderStatus.Confirmed, ct),
             WeeklyRevenue: await _db.Orders
-                .Where(o => o.Status >= TouchLove.Domain.Enums.OrderStatus.Confirmed && o.CreatedAt >= weekAgo)
+                .Where(o => o.CreatedAt >= weekAgo &&
+                    o.Status != TouchLove.Domain.Enums.OrderStatus.Cancelled && 
+                    o.Status != TouchLove.Domain.Enums.OrderStatus.WaitingForRefund && 
+                    o.Status != TouchLove.Domain.Enums.OrderStatus.Refunded &&
+                    (
+                        (o.PaymentMethod == "QR" && o.PaymentStatus == TouchLove.Domain.Enums.PaymentStatus.Paid) ||
+                        (o.PaymentMethod == "COD" && o.Status == TouchLove.Domain.Enums.OrderStatus.Completed)
+                    )
+                )
                 .SumAsync(o => o.TotalAmount, ct),
             NewCouplesLast7Days: await _db.Couples.IgnoreQueryFilters()
                 .Where(c => c.CreatedAt >= weekAgo)
