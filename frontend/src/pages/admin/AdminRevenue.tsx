@@ -73,6 +73,7 @@ const AdminRevenue = () => {
       }
     } catch (err: any) {
       console.error('Failed to fetch revenue', err);
+      setError(err.response?.data?.message || err.message || JSON.stringify(err));
       toast.error(err.response?.data?.message || 'Không thể tải dữ liệu báo cáo');
     } finally {
       setIsLoading(false);
@@ -113,6 +114,7 @@ const AdminRevenue = () => {
   };
 
   if (isLoading) return <div className="h-96 animate-pulse bg-white dark:bg-zinc-900 rounded-[2.5rem]" />;
+  if (error) return <div className="text-center p-12 text-destructive font-bold whitespace-pre-wrap">LỖI CHI TIẾT: {error}</div>;
   if (!report) return <div className="text-center p-12 text-zinc-500 font-bold">Không có dữ liệu báo cáo. Vui lòng thử lại.</div>;
 
   const s = report.summary;
