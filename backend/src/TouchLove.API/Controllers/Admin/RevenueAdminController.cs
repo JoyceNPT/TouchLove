@@ -14,12 +14,9 @@ namespace TouchLove.API.Controllers.Admin;
 public class RevenueAdminController : ControllerBase
 {
     private readonly IRevenueService _revenueService;
-    private readonly ExcelExportService _excelService;
-
-    public RevenueAdminController(IRevenueService revenueService, ExcelExportService excelService)
+    public RevenueAdminController(IRevenueService revenueService)
     {
         _revenueService = revenueService;
-        _excelService = excelService;
     }
 
     [HttpGet("summary")]
@@ -47,7 +44,8 @@ public class RevenueAdminController : ControllerBase
         var res = await _revenueService.GetFullRevenueReportAsync(req, ct);
         if (!res.Success) return BadRequest(res);
 
-        var excelBytes = _excelService.GenerateRevenueExcel(res.Data!);
+        var excelService = new ExcelExportService();
+        var excelBytes = excelService.GenerateRevenueExcel(res.Data!);
         string fileName = $"RevenueReport_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
         
         return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
