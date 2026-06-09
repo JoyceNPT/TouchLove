@@ -40,14 +40,21 @@ public class RevenueAdminController : ControllerBase
     [HttpGet("export")]
     public async Task<IActionResult> ExportExcel([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
     {
-        var req = new RevenueFilterRequest(startDate, endDate);
-        var res = await _revenueService.GetFullRevenueReportAsync(req, ct);
-        if (!res.Success) return BadRequest(res);
+        try
+        {
+            var req = new RevenueFilterRequest(startDate, endDate);
+            var res = await _revenueService.GetFullRevenueReportAsync(req, ct);
+            if (!res.Success) return BadRequest(res);
 
-        var excelService = new ExcelExportService();
-        var excelBytes = excelService.GenerateRevenueExcel(res.Data!);
-        string fileName = $"RevenueReport_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
-        
-        return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            var excelService = new ExcelExportService();
+            var excelBytes = excelService.GenerateRevenueExcel(res.Data!);
+            string fileName = $"RevenueReport_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
+            
+            return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<string>.Fail($"Export failed: {ex.Message} | StackTrace: {ex.StackTrace}"));
+        }
     }
 }
