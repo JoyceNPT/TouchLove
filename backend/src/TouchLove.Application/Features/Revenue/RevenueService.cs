@@ -21,9 +21,14 @@ public class RevenueService : IRevenueService
 
     public async Task<ApiResponse<FullRevenueReport>> GetFullRevenueReportAsync(RevenueFilterRequest req, CancellationToken ct = default)
     {
-        var query = _db.Orders
-            .Include(o => o.Items)
-            .Where(o => o.Status == OrderStatus.Completed);
+        try
+        {
+            var query = _db.Orders
+                .Include(o => o.Items)
+                .Where(o => 
+                    (o.PaymentMethod == "QR" && o.PaymentStatus == PaymentStatus.Paid) ||
+                    (o.PaymentMethod == "COD" && o.Status == OrderStatus.Completed)
+                );
 
         if (req.StartDate.HasValue)
             query = query.Where(o => o.CreatedAt >= req.StartDate.Value);
@@ -118,7 +123,12 @@ public class RevenueService : IRevenueService
             .OrderBy(x => x.MonthYear)
             .ToList();
 
-        var report = new FullRevenueReport(summary, orderDetails, voucherStats, monthlyStats);
-        return ApiResponse<FullRevenueReport>.Ok(report);
+            var report = new FullRevenueReport(summary, orderDetails, voucherStats, monthlyStats);
+            return ApiResponse<FullRevenueReport>.Ok(report);
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<FullRevenueReport>.Fail($"Error: {ex.Message} | StackTrace: {ex.StackTrace}");
+        }
     }
 }

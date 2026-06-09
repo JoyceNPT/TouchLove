@@ -71,9 +71,9 @@ const AdminRevenue = () => {
       if (res.data.success) {
         setReport(res.data.data);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch revenue', err);
-      toast.error('Không thể tải dữ liệu báo cáo');
+      toast.error(err.response?.data?.message || 'Không thể tải dữ liệu báo cáo');
     } finally {
       setIsLoading(false);
     }
