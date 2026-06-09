@@ -56,6 +56,7 @@ const AdminRevenue = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchReport = async () => {
     setIsLoading(true);
