@@ -46,7 +46,8 @@ public class ExcelExportService
 
         wsSummary.Cells["A3:A8"].Style.Font.Bold = true;
         wsSummary.Cells["B3:B5"].Style.Numberformat.Format = "#,##0";
-        wsSummary.Cells.AutoFitColumns();
+        wsSummary.Column(1).Width = 25;
+        wsSummary.Column(2).Width = 20;
 
         // Sheet 2: Chi tiết đơn hàng
         var wsOrders = package.Workbook.Worksheets.Add("Chi tiết đơn hàng");
@@ -73,7 +74,7 @@ public class ExcelExportService
             row++;
         }
         wsOrders.Cells[2, 4, row, 8].Style.Numberformat.Format = "#,##0";
-        wsOrders.Cells.AutoFitColumns();
+        for (int i = 1; i <= 8; i++) wsOrders.Column(i).Width = 20;
 
         // Sheet 3: Vouchers
         var wsVoucher = package.Workbook.Worksheets.Add("Hiệu quả Voucher");
@@ -96,7 +97,7 @@ public class ExcelExportService
             row++;
         }
         wsVoucher.Cells[2, 3, row, 4].Style.Numberformat.Format = "#,##0";
-        wsVoucher.Cells.AutoFitColumns();
+        for (int i = 1; i <= 4; i++) wsVoucher.Column(i).Width = 20;
 
         // Sheet 4: Theo tháng
         var wsMonthly = package.Workbook.Worksheets.Add("Theo tháng");
@@ -119,7 +120,7 @@ public class ExcelExportService
             row++;
         }
         wsMonthly.Cells[2, 2, row, 3].Style.Numberformat.Format = "#,##0";
-        wsMonthly.Cells.AutoFitColumns();
+        for (int i = 1; i <= 4; i++) wsMonthly.Column(i).Width = 20;
 
         return package.GetAsByteArray();
     }

@@ -106,9 +106,14 @@ const AdminRevenue = () => {
       document.body.removeChild(link);
       
       toast.success('Xuất file Excel thành công');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Export failed', err);
       toast.error('Có lỗi xảy ra khi xuất file Excel');
+      if (err.response?.data instanceof Blob) {
+        err.response.data.text().then((text: string) => setError(`EXPORT ERROR: ${text}`));
+      } else {
+        setError(`EXPORT ERROR: ${err.response?.data?.message || err.message}`);
+      }
     } finally {
       setIsExporting(false);
     }
