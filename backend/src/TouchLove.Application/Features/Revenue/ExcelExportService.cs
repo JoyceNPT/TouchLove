@@ -8,9 +8,7 @@ public class ExcelExportService
 {
     public ExcelExportService()
     {
-#pragma warning disable CS0618
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-#pragma warning restore CS0618
+        ExcelPackage.License.SetNonCommercialPersonal("Admin");
     }
 
     public byte[] GenerateRevenueExcel(FullRevenueReport report)
