@@ -100,7 +100,9 @@ const AdminRevenue = () => {
       const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.download = `Bao_Cao_Doanh_Thu_${new Date().getTime()}.xlsx`;
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+      link.setAttribute('download', `Bao_Cao_Doanh_Thu_${dateStr}.xlsx`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
