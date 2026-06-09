@@ -1,6 +1,5 @@
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
-using System.Drawing;
 using System.IO;
 
 namespace TouchLove.Application.Features.Revenue;
@@ -9,7 +8,7 @@ public class ExcelExportService
 {
     public ExcelExportService()
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        ExcelPackage.License.SetNonCommercial();
     }
 
     public byte[] GenerateRevenueExcel(FullRevenueReport report)
@@ -55,7 +54,7 @@ public class ExcelExportService
             wsOrders.Cells[1, i + 1].Value = orderHeaders[i];
             wsOrders.Cells[1, i + 1].Style.Font.Bold = true;
             wsOrders.Cells[1, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            wsOrders.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+            wsOrders.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(ExcelIndexedColor.Indexed22);
         }
 
         int row = 2;
@@ -82,7 +81,7 @@ public class ExcelExportService
             wsVoucher.Cells[1, i + 1].Value = vHeaders[i];
             wsVoucher.Cells[1, i + 1].Style.Font.Bold = true;
             wsVoucher.Cells[1, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            wsVoucher.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+            wsVoucher.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(ExcelIndexedColor.Indexed22);
         }
 
         row = 2;
@@ -105,7 +104,7 @@ public class ExcelExportService
             wsMonthly.Cells[1, i + 1].Value = mHeaders[i];
             wsMonthly.Cells[1, i + 1].Style.Font.Bold = true;
             wsMonthly.Cells[1, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            wsMonthly.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+            wsMonthly.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(ExcelIndexedColor.Indexed22);
         }
 
         row = 2;
