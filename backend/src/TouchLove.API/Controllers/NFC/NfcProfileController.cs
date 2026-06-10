@@ -170,6 +170,17 @@ public class NfcProfileController : ControllerBase
                 await _storage.DeleteByUrlAsync(oldAvatarUrl, ct);
             }
 
+            // Clear couple cache so the Couple Space shows the new avatar immediately
+            var keychain = await _db.Keychains.FirstOrDefaultAsync(k => k.UserId == userId && k.CoupleId != null, ct);
+            if (keychain != null && keychain.CoupleId.HasValue)
+            {
+                var cacheService = HttpContext.RequestServices.GetService<ICacheService>();
+                if (cacheService != null)
+                {
+                    await cacheService.RemoveAsync($"couple:{keychain.CoupleId.Value}", ct);
+                }
+            }
+
             return Ok(ApiResponse<string>.Ok(uploadResult.PublicUrl));
         }
         catch (Exception ex)
