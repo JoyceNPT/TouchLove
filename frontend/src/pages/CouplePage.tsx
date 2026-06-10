@@ -26,7 +26,8 @@ import {
   Images,
   User,
   Globe,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
 import axios from '../api/axiosInstance';
 import * as signalR from '@microsoft/signalr';
@@ -122,6 +123,37 @@ const MemoryCarouselModal = ({
   const current = allMedia[idx];
   const isVideo = current.mimeType?.startsWith('video/');
 
+  const handleDownload = async (url: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      
+      // Extract filename from URL or fallback
+      const urlParts = url.split('/');
+      let filename = urlParts[urlParts.length - 1];
+      if (!filename || filename.indexOf('.') === -1) {
+        filename = 'touchlove_memory' + (url.includes('.mp4') ? '.mp4' : '.jpg');
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast.error('Không thể tải tệp xuống trực tiếp do giới hạn bảo mật. Đang mở tệp trong tab mới...');
+      // Fallback: open in new tab
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -136,12 +168,21 @@ const MemoryCarouselModal = ({
           <span className="text-white/70 text-xs font-black uppercase tracking-widest">
             {allMedia.length > 1 ? `Ảnh ${idx + 1} / ${allMedia.length}` : 'Chi tiết kỷ niệm'}
           </span>
-          <button 
-            onClick={onClose}
-            className="p-3 bg-zinc-900/60 hover:bg-zinc-800 rounded-full text-white backdrop-blur-md transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={(e) => handleDownload(current.url, e)}
+              className="p-3 bg-zinc-900/60 hover:bg-zinc-800 rounded-full text-white backdrop-blur-md transition-colors"
+              title="Tải về"
+            >
+              <Download className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={onClose}
+              className="p-3 bg-zinc-900/60 hover:bg-zinc-800 rounded-full text-white backdrop-blur-md transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Media viewer */}
