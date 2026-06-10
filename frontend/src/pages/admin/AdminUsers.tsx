@@ -18,7 +18,8 @@ interface User {
   id: string;
   displayName: string;
   email: string;
-  isActive: boolean;
+  isSalesActive: boolean;
+  isNfcActive: boolean;
   isEmailVerified: boolean;
   createdAt: string;
   gender?: string;
@@ -57,25 +58,47 @@ const AdminUsers = () => {
     fetchUsers();
   }, [userTypeFilter]);
 
-  const toggleUserStatus = async (user: User) => {
-    const action = user.isActive ? 'block' : 'unblock';
-    
+  const toggleSalesStatus = async (user: User) => {
+    const action = user.isSalesActive ? 'Khóa mua hàng' : 'Mở khóa mua hàng';
     setConfirmConfig({
       isOpen: true,
-      title: user.isActive ? 'Khóa người dùng' : 'Mở khóa người dùng',
-      message: `Bạn có chắc muốn ${user.isActive ? 'khóa' : 'mở khóa'} người dùng này?`,
-      type: user.isActive ? 'danger' : 'info',
+      title: action,
+      message: `Bạn có chắc muốn ${action.toLowerCase()} người dùng này?`,
+      type: user.isSalesActive ? 'danger' : 'info',
       onConfirm: async () => {
         try {
-          const res = await axiosInstance.post(`/admin/users/${user.id}/${action}`);
+          const res = await axiosInstance.post(`/admin/users/${user.id}/toggle-sales`);
           if (res.data.success) {
             setUsers(prev => prev.map(u => 
-              u.id === user.id ? { ...u, isActive: !u.isActive } : u
+              u.id === user.id ? { ...u, isSalesActive: !u.isSalesActive } : u
             ));
-            toast.success(`${user.isActive ? 'Khóa' : 'Mở khóa'} người dùng thành công!`);
+            toast.success(`${action} thành công!`);
           }
         } catch (err) {
-          toast.error('Lỗi khi cập nhật trạng thái người dùng.');
+          toast.error('Lỗi khi cập nhật trạng thái mua hàng.');
+        }
+      }
+    });
+  };
+
+  const toggleNfcStatus = async (user: User) => {
+    const action = user.isNfcActive ? 'Khóa NFC' : 'Mở khóa NFC';
+    setConfirmConfig({
+      isOpen: true,
+      title: action,
+      message: `Bạn có chắc muốn ${action.toLowerCase()} không gian NFC của người dùng này?`,
+      type: user.isNfcActive ? 'danger' : 'info',
+      onConfirm: async () => {
+        try {
+          const res = await axiosInstance.post(`/admin/users/${user.id}/toggle-nfc`);
+          if (res.data.success) {
+            setUsers(prev => prev.map(u => 
+              u.id === user.id ? { ...u, isNfcActive: !u.isNfcActive } : u
+            ));
+            toast.success(`${action} thành công!`);
+          }
+        } catch (err) {
+          toast.error('Lỗi khi cập nhật trạng thái NFC.');
         }
       }
     });
@@ -125,7 +148,8 @@ const AdminUsers = () => {
               <tr>
                 <th className="px-6 py-4">Người dùng</th>
                 <th className="px-6 py-4">Xác minh</th>
-                <th className="px-6 py-4">Trạng thái</th>
+                <th className="px-6 py-4">Trạng thái Mua hàng</th>
+                <th className="px-6 py-4">Trạng thái NFC</th>
                 <th className="px-6 py-4">Ngày tham gia</th>
                 <th className="px-6 py-4 text-right">Thao tác</th>
               </tr>
@@ -134,12 +158,12 @@ const AdminUsers = () => {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td colSpan={5} className="px-6 py-4 h-16 bg-zinc-50/50 dark:bg-zinc-800/20" />
+                    <td colSpan={6} className="px-6 py-4 h-16 bg-zinc-50/50 dark:bg-zinc-800/20" />
                   </tr>
                 ))
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center text-zinc-500 font-bold">Không tìm thấy người dùng nào.</td>
+                  <td colSpan={6} className="px-6 py-20 text-center text-zinc-500 font-bold">Không tìm thấy người dùng nào.</td>
                 </tr>
               ) : filteredUsers.map((u) => (
                 <React.Fragment key={u.id}>
@@ -174,9 +198,16 @@ const AdminUsers = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                        u.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                        u.isSalesActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
                       }`}>
-                        {u.isActive ? 'Hoạt động' : 'Đã khóa'}
+                        {u.isSalesActive ? 'Hoạt động' : 'Đã khóa'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                        u.isNfcActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                      }`}>
+                        {u.isNfcActive ? 'Hoạt động' : 'Đã khóa'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-zinc-500">
@@ -187,13 +218,24 @@ const AdminUsers = () => {
                     <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
-                          onClick={() => toggleUserStatus(u)}
+                          onClick={() => toggleSalesStatus(u)}
                           className={`p-2 rounded-lg transition-all ${
-                            u.isActive ? 'text-red-500 hover:bg-red-500/10' : 'text-green-500 hover:bg-green-500/10'
+                            u.isSalesActive ? 'text-red-500 hover:bg-red-500/10' : 'text-green-500 hover:bg-green-500/10'
                           }`}
-                          title={u.isActive ? 'Khóa người dùng' : 'Mở khóa người dùng'}
+                          title={u.isSalesActive ? 'Khóa mua hàng' : 'Mở khóa mua hàng'}
                         >
-                          {u.isActive ? <ShieldAlert className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                          {u.isSalesActive ? <ShieldAlert className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                          <span className="sr-only">Sale</span>
+                        </button>
+                        <button 
+                          onClick={() => toggleNfcStatus(u)}
+                          className={`p-2 rounded-lg transition-all ${
+                            u.isNfcActive ? 'text-red-500 hover:bg-red-500/10' : 'text-green-500 hover:bg-green-500/10'
+                          }`}
+                          title={u.isNfcActive ? 'Khóa NFC' : 'Mở khóa NFC'}
+                        >
+                          {u.isNfcActive ? <ShieldAlert className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                          <span className="sr-only">NFC</span>
                         </button>
                         <button 
                           onClick={() => setExpandedUserId(expandedUserId === u.id ? null : u.id)}
@@ -206,7 +248,7 @@ const AdminUsers = () => {
                   </tr>
                   {expandedUserId === u.id && (
                     <tr className="bg-zinc-50/50 dark:bg-zinc-800/10">
-                      <td colSpan={5} className="px-8 py-6 border-t border-b border-zinc-150 dark:border-zinc-800">
+                      <td colSpan={6} className="px-8 py-6 border-t border-b border-zinc-150 dark:border-zinc-800">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
                           <div className="space-y-1 bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-150 dark:border-zinc-800/50">
                             <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block mb-1">Giới tính</span>

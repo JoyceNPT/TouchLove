@@ -339,7 +339,8 @@ public class NfcProfileController : ControllerBase
             DisplayName = "Người dùng mới",
             UserType = UserType.NFC,
             NfcPassword = req.Passcode,
-            IsActive = true,
+            IsSalesActive = true,
+            IsNfcActive = true,
             IsEmailVerified = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

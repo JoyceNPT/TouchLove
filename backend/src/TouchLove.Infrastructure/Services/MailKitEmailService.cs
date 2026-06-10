@@ -28,11 +28,22 @@ public class MailKitEmailService : IEmailService
             message.Body = new TextPart("html") { Text = htmlBody };
 
             using var client = new SmtpClient();
-            await client.ConnectAsync(
-                _config["Email:Host"] ?? "localhost",
-                int.Parse(_config["Email:Port"] ?? "1025"),
-                MailKit.Security.SecureSocketOptions.None,
-                ct);
+            var host = _config["Email:Host"] ?? "localhost";
+            var port = int.Parse(_config["Email:Port"] ?? "1025");
+            var username = _config["Email:Username"];
+            var password = _config["Email:Password"];
+            
+            var secureOption = (port == 587 || port == 465) 
+                ? MailKit.Security.SecureSocketOptions.Auto 
+                : MailKit.Security.SecureSocketOptions.None;
+
+            await client.ConnectAsync(host, port, secureOption, ct);
+
+            if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+            {
+                await client.AuthenticateAsync(username, password, ct);
+            }
+
             await client.SendAsync(message, ct);
             await client.DisconnectAsync(true, ct);
 

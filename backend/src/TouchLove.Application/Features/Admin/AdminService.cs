@@ -32,7 +32,7 @@ public class AdminService
             TotalCouples: await _db.Couples.IgnoreQueryFilters().CountAsync(ct),
             ActiveCouples: await _db.Couples.CountAsync(c => c.IsActive, ct),
             TotalUsers: await _userManager.Users.CountAsync(ct),
-            ActiveUsers: await _userManager.Users.CountAsync(u => u.IsActive, ct),
+            ActiveUsers: await _userManager.Users.CountAsync(u => u.IsSalesActive, ct),
             TotalMemories: await _db.Memories.IgnoreQueryFilters().CountAsync(ct),
             TotalOrders: await _db.Orders.CountAsync(o => o.Status >= TouchLove.Domain.Enums.OrderStatus.Confirmed, ct),
             WeeklyRevenue: await _db.Orders
@@ -65,13 +65,17 @@ public class AdminService
 
         if (!string.IsNullOrEmpty(search))
             query = query.Where(u => u.Email!.Contains(search) || u.DisplayName.Contains(search));
-        if (status == "blocked") query = query.Where(u => !u.IsActive);
-        else if (status == "active") query = query.Where(u => u.IsActive);
-
+        if (!string.IsNullOrEmpty(status))
+        {
+            if (status.Equals("active", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(u => u.IsSalesActive);
+            else if (status.Equals("blocked", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(u => !u.IsSalesActive);
+        }
         var total = await query.CountAsync(ct);
         var items = await query
             .Skip((page - 1) * size).Take(size)
-            .Select(u => new AdminUserDto(u.Id, u.DisplayName, u.Email!, u.IsActive, u.IsEmailVerified, u.CreatedAt, u.Gender, u.DateOfBirth, u.Bio, u.UserType.ToString()))
+            .Select(u => new AdminUserDto(u.Id, u.DisplayName, u.Email!, u.IsSalesActive, u.IsNfcActive, u.IsEmailVerified, u.CreatedAt, u.Gender, u.DateOfBirth, u.Bio, u.UserType.ToString()))
             .ToListAsync(ct);
 
         return ApiResponse<PagedResult<AdminUserDto>>.Ok(new PagedResult<AdminUserDto>
@@ -80,22 +84,22 @@ public class AdminService
         });
     }
 
-    public async Task<ApiResponse<string>> BlockUserAsync(Guid userId, CancellationToken ct = default)
+    public async Task<ApiResponse<string>> ToggleSalesStatusAsync(Guid userId, CancellationToken ct = default)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user == null) return ApiResponse<string>.Fail("User not found.");
-        user.IsActive = false;
+        user.IsSalesActive = !user.IsSalesActive;
         await _userManager.UpdateAsync(user);
-        return ApiResponse<string>.Ok("User blocked.");
+        return ApiResponse<string>.Ok(user.IsSalesActive ? "User sales access unblocked." : "User sales access blocked.");
     }
 
-    public async Task<ApiResponse<string>> UnblockUserAsync(Guid userId, CancellationToken ct = default)
+    public async Task<ApiResponse<string>> ToggleNfcStatusAsync(Guid userId, CancellationToken ct = default)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user == null) return ApiResponse<string>.Fail("User not found.");
-        user.IsActive = true;
+        user.IsNfcActive = !user.IsNfcActive;
         await _userManager.UpdateAsync(user);
-        return ApiResponse<string>.Ok("User unblocked.");
+        return ApiResponse<string>.Ok(user.IsNfcActive ? "User NFC access unblocked." : "User NFC access blocked.");
     }
 
     // ─── Keychains ─────────────────────────────────────────────────────
@@ -262,7 +266,7 @@ public class AdminService
 public record AdminStatsDto(int TotalCouples, int ActiveCouples, int TotalUsers, int ActiveUsers,
     int TotalMemories, int TotalOrders, decimal WeeklyRevenue, List<NewCoupleDto> NewCouplesLast7Days);
 public record NewCoupleDto(Guid Id, string Name, DateTime PairedAt);
-public record AdminUserDto(Guid Id, string DisplayName, string Email, bool IsActive, bool IsEmailVerified, DateTime CreatedAt, string? Gender, DateOnly? DateOfBirth, string? Bio, string UserType);
+public record AdminUserDto(Guid Id, string DisplayName, string Email, bool IsSalesActive, bool IsNfcActive, bool IsEmailVerified, DateTime CreatedAt, string? Gender, DateOnly? DateOfBirth, string? Bio, string UserType);
 public record KeychainSummaryDto(
     Guid Id, string KeyId, KeychainStatus Status, DateTime CreatedAt, DateTime? ActivatedAt,
     Guid? CoupleId, string? CoupleName, string? CoupleSlug,

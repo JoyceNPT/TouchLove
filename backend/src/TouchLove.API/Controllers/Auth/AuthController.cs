@@ -116,7 +116,13 @@ public class AuthController : ControllerBase
     [HttpGet("verify-email")]
     public async Task<ActionResult<ApiResponse<string>>> VerifyEmail([FromQuery] string token, CancellationToken ct)
         => Ok(await _authService.VerifyEmailAsync(token, ct));
+
+    [HttpPost("resend-verification")]
+    public async Task<ActionResult<ApiResponse<string>>> ResendVerification([FromBody] ResendVerificationRequest req, CancellationToken ct)
+        => Ok(await _authService.ResendVerificationEmailAsync(req.Email, ct));
 }
+
+public record ResendVerificationRequest(string Email);
 
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);

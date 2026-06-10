@@ -136,8 +136,11 @@ public class AuthService
             return ApiResponse<LoginResponse>.Fail("Invalid email or password.");
         }
 
-        if (!user.IsActive)
+        if (!user.IsSalesActive)
             return ApiResponse<LoginResponse>.Fail("Your account has been suspended. Please contact support.");
+
+        if (!user.IsEmailVerified)
+            return ApiResponse<LoginResponse>.Fail("Vui lòng xác thực email trước khi đăng nhập.", new List<string> { "UNVERIFIED_EMAIL" });
 
         // Clear failed attempts
         await _cache.RemoveAsync(attemptKey, ct);
@@ -153,7 +156,7 @@ public class AuthService
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: rawRefreshToken,
-            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname),
+            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsSalesActive, user.IsNfcActive, user.UserType.ToString(), user.Nickname, user.IsEmailVerified),
             ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes)
         ));
     }
@@ -182,7 +185,7 @@ public class AuthService
             return ApiResponse<RefreshResponse>.Fail("Refresh token expired. Please login again.");
 
         var user = token.User!;
-        if (!user.IsActive)
+        if (!user.IsSalesActive && !user.IsNfcActive)
             return ApiResponse<RefreshResponse>.Fail("Account suspended.");
 
         // Rotation: revoke old, issue new
@@ -214,7 +217,7 @@ public class AuthService
             return ApiResponse<string>.Ok("If this email exists, a reset link has been sent."); // silent limit
 
         var user = await _userManager.FindByEmailAsync(email);
-        if (user != null && user.IsActive)
+        if (user != null && user.IsSalesActive)
         {
             var rawToken = GenerateSecureToken();
             var hash = HashSha256(rawToken);
@@ -243,10 +246,16 @@ public class AuthService
     {
         var hash = HashSha256(rawToken);
         var token = await _db.PasswordResetTokens
-            .FirstOrDefaultAsync(t => t.TokenHash == hash && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow, ct);
+            .FirstOrDefaultAsync(t => t.TokenHash == hash && !t.IsUsed, ct);
 
         if (token == null)
-            return ApiResponse<string>.Fail("Invalid or expired reset token.");
+            return ApiResponse<string>.Fail("Invalid reset token.");
+            
+        if (token.ExpiresAt < DateTime.UtcNow)
+        {
+            var expiredUser = await _userManager.FindByIdAsync(token.UserId.ToString());
+            return ApiResponse<string>.Fail("Reset token expired.", new List<string> { "TOKEN_EXPIRED", expiredUser?.Email ?? "" });
+        }
 
         var user = await _userManager.FindByIdAsync(token.UserId.ToString());
         if (user == null) return ApiResponse<string>.Fail("User not found.");
@@ -279,10 +288,16 @@ public class AuthService
     {
         var hash = HashSha256(rawToken);
         var token = await _db.EmailVerificationTokens
-            .FirstOrDefaultAsync(t => t.TokenHash == hash && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow, ct);
+            .FirstOrDefaultAsync(t => t.TokenHash == hash && !t.IsUsed, ct);
 
         if (token == null)
-            return ApiResponse<string>.Fail("Invalid or expired verification token.");
+            return ApiResponse<string>.Fail("Invalid verification token.");
+            
+        if (token.ExpiresAt < DateTime.UtcNow)
+        {
+            var expiredUser = await _userManager.FindByIdAsync(token.UserId.ToString());
+            return ApiResponse<string>.Fail("Verification token expired.", new List<string> { "TOKEN_EXPIRED", expiredUser?.Email ?? "" });
+        }
 
         var user = await _userManager.FindByIdAsync(token.UserId.ToString());
         if (user == null) return ApiResponse<string>.Fail("User not found.");
@@ -294,6 +309,37 @@ public class AuthService
         return ApiResponse<string>.Ok("Email verified successfully.");
     }
 
+    public async Task<ApiResponse<string>> ResendVerificationEmailAsync(string email, CancellationToken ct = default)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+            return ApiResponse<string>.Ok("If this email exists, a verification link has been sent."); // Anti-enumeration
+
+        if (user.IsEmailVerified)
+            return ApiResponse<string>.Fail("Email đã được xác thực.");
+
+        // Invalidate old tokens
+        var oldTokens = await _db.EmailVerificationTokens
+            .Where(t => t.UserId == user.Id && !t.IsUsed)
+            .ToListAsync(ct);
+        foreach (var t in oldTokens) t.IsUsed = true;
+
+        var rawToken = GenerateSecureToken();
+        var hash = HashSha256(rawToken);
+        _db.EmailVerificationTokens.Add(new EmailVerificationToken
+        {
+            UserId = user.Id,
+            TokenHash = hash,
+            ExpiresAt = DateTime.UtcNow.AddHours(Constants.Auth.EmailVerificationHours)
+        });
+        await _db.SaveChangesAsync(ct);
+
+        var verifyLink = $"{_config["Frontend:Url"]}/verify-email?token={rawToken}";
+        await _email.SendEmailVerificationAsync(user.Email!, verifyLink, ct);
+
+        return ApiResponse<string>.Ok("If this email exists, a verification link has been sent.");
+    }
+
     // ──────────────────────────────────────────────────────────────────
     // LOGOUT
     // ──────────────────────────────────────────────────────────────────
@@ -302,7 +348,7 @@ public class AuthService
         var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user == null) return ApiResponse<UserDto>.Fail("User not found.");
         
-        if (!user.IsActive) return ApiResponse<UserDto>.Fail("Account suspended.");
+        if (!user.IsSalesActive && !user.IsNfcActive) return ApiResponse<UserDto>.Fail("Account suspended.");
 
         // Include coupleId for NFC users
         Guid? coupleId = null;
@@ -314,7 +360,7 @@ public class AuthService
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        return ApiResponse<UserDto>.Ok(new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname, coupleId));
+        return ApiResponse<UserDto>.Ok(new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsSalesActive, user.IsNfcActive, user.UserType.ToString(), user.Nickname, user.IsEmailVerified, coupleId));
     }
 
     public async Task<ApiResponse<string>> LogoutAsync(string rawToken, CancellationToken ct = default)
@@ -407,7 +453,8 @@ public class AuthService
                     UserName = $"nfc_{keyId}",
                     Email = $"{keyId}@touchlove.local", // Placeholder email
                     DisplayName = "Người dùng mới",
-                    IsActive = true,
+                    IsSalesActive = true,
+                    IsNfcActive = true,
                     IsEmailVerified = true // Auto-verify for NFC users
                 };
 
@@ -426,6 +473,8 @@ public class AuthService
         else
         {
             user = keychain.User!;
+            if (!user.IsNfcActive)
+                return ApiResponse<LoginResponse>.Fail("Tài khoản không gian cặp đôi của bạn đã bị khóa.");
         }
 
         var roles = await _userManager.GetRolesAsync(user);
@@ -438,7 +487,7 @@ public class AuthService
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: rawRefreshToken,
-            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname),
+            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsSalesActive, user.IsNfcActive, user.UserType.ToString(), user.Nickname, user.IsEmailVerified),
             ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes),
             CoupleId: coupleIdForRedirect
         ));
@@ -458,6 +507,9 @@ public class AuthService
             return ApiResponse<LoginResponse>.Fail("NFC chưa được kích hoạt tài khoản.");
 
         var user = keychain.User!;
+        if (!user.IsNfcActive)
+            return ApiResponse<LoginResponse>.Fail("Tài khoản không gian cặp đôi của bạn đã bị khóa.");
+
         if (user.NfcPassword != passcode)
             return ApiResponse<LoginResponse>.Fail("Mật khẩu quét NFC không chính xác.");
 
@@ -471,7 +523,7 @@ public class AuthService
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: rawRefreshToken,
-            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname),
+            User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsSalesActive, user.IsNfcActive, user.UserType.ToString(), user.Nickname, user.IsEmailVerified),
             ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes),
             CoupleId: coupleIdForRedirect
         ));
@@ -505,7 +557,8 @@ public class AuthService
                     Email = email,
                     DisplayName = payload.Name ?? email.Split('@')[0],
                     AvatarUrl = payload.Picture,
-                    IsActive = true,
+                    IsSalesActive = true,
+                    IsNfcActive = true,
                     IsEmailVerified = true, // Google accounts are auto-verified
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -525,17 +578,31 @@ public class AuthService
             }
             else
             {
+                bool needSave = false;
+
                 // Sync profile picture if available
                 if (string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(payload.Picture))
                 {
                     user.AvatarUrl = payload.Picture;
                     user.UpdatedAt = DateTime.UtcNow;
+                    needSave = true;
+                }
+
+                // If they prove they own the Google account, they own the email
+                if (!user.IsEmailVerified)
+                {
+                    user.IsEmailVerified = true;
+                    needSave = true;
+                }
+
+                if (needSave)
+                {
                     await _db.SaveChangesAsync(ct);
                 }
             }
 
-            if (!user.IsActive)
-                return ApiResponse<LoginResponse>.Fail("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.");
+            if (!user.IsSalesActive)
+                return ApiResponse<LoginResponse>.Fail("Tài khoản mua hàng của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.");
 
             var roles = await _userManager.GetRolesAsync(user);
             var accessToken = GenerateJwtToken(user, roles);
@@ -547,7 +614,7 @@ public class AuthService
             return ApiResponse<LoginResponse>.Ok(new LoginResponse(
                 AccessToken: accessToken,
                 RefreshToken: rawRefreshToken,
-                User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsActive, user.UserType.ToString(), user.Nickname),
+                User: new UserDto(user.Id, user.DisplayName, user.Email!, user.AvatarUrl, roles.First(), user.IsSalesActive, user.IsNfcActive, user.UserType.ToString(), user.Nickname, user.IsEmailVerified),
                 ExpiresAt: DateTime.UtcNow.AddMinutes(Constants.Auth.AccessTokenMinutes)
             ));
         }
@@ -567,6 +634,8 @@ public class AuthService
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email!),
             new("displayName", user.DisplayName),
+            new("IsSalesActive", user.IsSalesActive.ToString()),
+            new("IsNfcActive", user.IsNfcActive.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
@@ -619,4 +688,4 @@ public record LoginRequest(string Email, string Password, bool RememberMe, strin
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record LoginResponse(string AccessToken, string RefreshToken, UserDto User, DateTime ExpiresAt, Guid? CoupleId = null);
 public record RefreshResponse(string AccessToken, string RefreshToken, DateTime ExpiresAt);
-public record UserDto(Guid Id, string DisplayName, string Email, string? AvatarUrl, string Role, bool IsActive, string UserType, string? Nickname, Guid? CoupleId = null);
+public record UserDto(Guid Id, string DisplayName, string Email, string? AvatarUrl, string Role, bool IsSalesActive, bool IsNfcActive, string UserType, string? Nickname, bool IsEmailVerified, Guid? CoupleId = null);

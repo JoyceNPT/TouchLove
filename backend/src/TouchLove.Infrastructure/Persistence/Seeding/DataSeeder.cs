@@ -48,7 +48,8 @@ public static class DataSeeder
                 Email = "admin@touchlove.local",
                 DisplayName = "Admin",
                 IsEmailVerified = true,
-                IsActive = true,
+                IsSalesActive = true,
+                IsNfcActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -67,7 +68,8 @@ public static class DataSeeder
                 Email = "user1@test.local",
                 DisplayName = "An",
                 IsEmailVerified = true,
-                IsActive = true,
+                IsSalesActive = true,
+                IsNfcActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -85,7 +87,8 @@ public static class DataSeeder
                 Email = "user2@test.local",
                 DisplayName = "Bình",
                 IsEmailVerified = true,
-                IsActive = true,
+                IsSalesActive = true,
+                IsNfcActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -109,7 +112,8 @@ public static class DataSeeder
                 Bio = "Yêu thích nhiếp ảnh và mong muốn tìm kiếm một nửa dịu dàng.",
                 NfcPassword = "123456",
                 IsEmailVerified = true,
-                IsActive = true,
+                IsSalesActive = true,
+                IsNfcActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -132,7 +136,8 @@ public static class DataSeeder
                 Bio = "Đam mê du lịch và làm đồ len handmade. Hãy chạm nhẹ kết nối nhé!",
                 NfcPassword = "123456",
                 IsEmailVerified = true,
-                IsActive = true,
+                IsSalesActive = true,
+                IsNfcActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -155,7 +160,8 @@ public static class DataSeeder
                 Bio = "Cung Bạch Dương điển hình, yêu thích khám phá công nghệ.",
                 NfcPassword = "888888",
                 IsEmailVerified = true,
-                IsActive = true,
+                IsSalesActive = true,
+                IsNfcActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -178,7 +184,8 @@ public static class DataSeeder
                 Bio = "Thích đọc sách, nghe nhạc nhẹ và làm vườn.",
                 NfcPassword = "888888",
                 IsEmailVerified = true,
-                IsActive = true,
+                IsSalesActive = true,
+                IsNfcActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };

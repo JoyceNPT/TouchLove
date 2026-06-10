@@ -9,6 +9,9 @@ interface User {
   email: string;
   avatarUrl?: string;
   role: string;
+  isSalesActive: boolean;
+  isNfcActive: boolean;
+  isEmailVerified: boolean;
   userType: string;
   coupleId?: string; // Only for paired NFC users
 }

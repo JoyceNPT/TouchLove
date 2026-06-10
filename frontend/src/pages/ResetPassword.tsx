@@ -13,6 +13,8 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
+  const [expiredEmail, setExpiredEmail] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   const token = searchParams.get('token');
 
@@ -40,8 +42,29 @@ const ResetPassword = () => {
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Token không hợp lệ hoặc đã hết hạn.');
+      if (err.response?.data?.errors && err.response.data.errors[0] === 'TOKEN_EXPIRED') {
+        setExpiredEmail(err.response.data.errors[1]);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!expiredEmail) return;
+    setIsResending(true);
+    try {
+      const response = await axios.post('/api/auth/forgot-password', { email: expiredEmail });
+      if (response.data.success) {
+        setError('Đã gửi lại link đặt lại mật khẩu. Vui lòng kiểm tra email.');
+        setExpiredEmail(null);
+      } else {
+        setError(response.data.message || 'Không thể gửi lại email.');
+      }
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Có lỗi xảy ra khi gửi lại email.');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -115,7 +138,20 @@ const ResetPassword = () => {
               </div>
 
               {error && (
-                <p className="text-destructive text-sm text-center font-medium">{error}</p>
+                <div className="flex flex-col gap-2">
+                  <p className="text-destructive text-sm text-center font-medium">{error}</p>
+                  {expiredEmail && (
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={isResending}
+                      className="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                      {isResending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      Gửi lại link
+                    </button>
+                  )}
+                </div>
               )}
 
               <button

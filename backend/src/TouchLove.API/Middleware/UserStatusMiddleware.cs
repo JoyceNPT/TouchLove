@@ -21,11 +21,38 @@ public class UserStatusMiddleware
             if (!string.IsNullOrEmpty(userId))
             {
                 var user = await userManager.FindByIdAsync(userId);
-                if (user == null || !user.IsActive)
+                if (user == null)
                 {
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    await context.Response.WriteAsJsonAsync(new { success = false, message = "Tài khoản của bạn đã bị khóa hoặc không tồn tại." });
+                    await context.Response.WriteAsJsonAsync(new { success = false, message = "Tài khoản không tồn tại." });
                     return;
+                }
+
+                var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
+                bool isNfcRoute = path.StartsWith("/api/nfc") || 
+                                  path.StartsWith("/api/keychains") || 
+                                  path.StartsWith("/api/couples") || 
+                                  path.StartsWith("/api/memories");
+
+                bool isAuthRoute = path.StartsWith("/api/auth");
+
+                if (isNfcRoute)
+                {
+                    if (!user.IsNfcActive)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        await context.Response.WriteAsJsonAsync(new { success = false, message = "Không gian NFC của bạn đã bị khóa." });
+                        return;
+                    }
+                }
+                else if (!isAuthRoute)
+                {
+                    if (!user.IsSalesActive)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        await context.Response.WriteAsJsonAsync(new { success = false, message = "Tài khoản mua hàng của bạn đã bị khóa." });
+                        return;
+                    }
                 }
             }
         }

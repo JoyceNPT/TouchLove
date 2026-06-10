@@ -9,6 +9,8 @@ const VerifyEmail = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const [expiredEmail, setExpiredEmail] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   const token = searchParams.get('token');
 
@@ -25,20 +27,43 @@ const VerifyEmail = () => {
         if (response.data.success) {
           setStatus('success');
           setMessage('Chúc mừng! Email của bạn đã được xác thực thành công.');
-          // Auto redirect to login after 5 seconds
           setTimeout(() => navigate('/login'), 5000);
         } else {
           setStatus('error');
           setMessage(response.data.message || 'Xác thực không thành công.');
+          if (response.data.errors && response.data.errors[0] === 'TOKEN_EXPIRED') {
+            setExpiredEmail(response.data.errors[1]);
+          }
         }
       } catch (error: any) {
         setStatus('error');
         setMessage(error.response?.data?.message || 'Có lỗi xảy ra trong quá trình xác thực.');
+        if (error.response?.data?.errors && error.response.data.errors[0] === 'TOKEN_EXPIRED') {
+          setExpiredEmail(error.response.data.errors[1]);
+        }
       }
     };
 
     verify();
   }, [token, navigate]);
+
+  const handleResend = async () => {
+    if (!expiredEmail) return;
+    setIsResending(true);
+    try {
+      const response = await axios.post('/api/auth/resend-verification', { email: expiredEmail });
+      if (response.data.success) {
+        setMessage('Đã gửi lại link xác nhận. Vui lòng kiểm tra email của bạn.');
+        setExpiredEmail(null);
+      } else {
+        setMessage(response.data.message || 'Không thể gửi lại email xác nhận.');
+      }
+    } catch (error: any) {
+      setMessage(error.response?.data?.message || 'Có lỗi xảy ra khi gửi lại email.');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -68,16 +93,28 @@ const VerifyEmail = () => {
         </p>
 
         {status !== 'loading' && (
-          <Link 
-            to="/login" 
-            className="inline-block w-full bg-primary text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
-          >
-            Quay lại Đăng nhập
-          </Link>
+          <div className="flex flex-col gap-3 mt-8">
+            {expiredEmail && (
+              <button
+                onClick={handleResend}
+                disabled={isResending}
+                className="w-full bg-white border-2 border-primary text-primary py-3 rounded-xl font-bold hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
+              >
+                {isResending ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+                Gửi lại link xác nhận
+              </button>
+            )}
+            <Link 
+              to="/login" 
+              className="inline-block w-full bg-primary text-white py-3 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+            >
+              Quay lại Đăng nhập
+            </Link>
+          </div>
         )}
         
         {status === 'success' && (
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-4 text-xs text-muted-foreground font-medium">
             Hệ thống sẽ tự động chuyển hướng sau vài giây...
           </p>
         )}

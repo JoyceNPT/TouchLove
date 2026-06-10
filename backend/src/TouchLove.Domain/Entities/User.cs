@@ -10,7 +10,8 @@ public class User : IdentityUser<Guid>
     public string? AvatarUrl { get; set; }
     public string? Nickname { get; set; }
     public bool IsEmailVerified { get; set; } = false;
-    public bool IsActive { get; set; } = true;
+    public bool IsSalesActive { get; set; } = true;
+    public bool IsNfcActive { get; set; } = true;
     public Theme Theme { get; set; } = Theme.Light;
     public Language Language { get; set; } = Language.VI;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

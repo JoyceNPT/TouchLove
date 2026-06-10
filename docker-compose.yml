@@ -32,8 +32,6 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Redis__ConnectionString: redis:6379
-      Email__Host: mailhog
-      Email__Port: 1025
       Frontend__Url: https://touchlove.id.vn
       Storage__Provider: S3
       Storage__S3__Region: ap-southeast-2

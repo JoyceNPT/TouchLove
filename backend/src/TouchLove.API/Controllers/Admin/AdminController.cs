@@ -32,11 +32,11 @@ public class AdminController : ControllerBase
         [FromQuery] int page = 1, [FromQuery] int size = 20, CancellationToken ct = default)
         => Ok(await _adminService.GetUsersAsync(search, status, userType, page, size, ct));
 
-    [HttpPost("users/{userId:guid}/block")]
-    public async Task<IActionResult> BlockUser(Guid userId, CancellationToken ct) => Ok(await _adminService.BlockUserAsync(userId, ct));
+    [HttpPost("users/{userId:guid}/toggle-sales")]
+    public async Task<IActionResult> ToggleSalesStatus(Guid userId, CancellationToken ct) => Ok(await _adminService.ToggleSalesStatusAsync(userId, ct));
 
-    [HttpPost("users/{userId:guid}/unblock")]
-    public async Task<IActionResult> UnblockUser(Guid userId, CancellationToken ct) => Ok(await _adminService.UnblockUserAsync(userId, ct));
+    [HttpPost("users/{userId:guid}/toggle-nfc")]
+    public async Task<IActionResult> ToggleNfcStatus(Guid userId, CancellationToken ct) => Ok(await _adminService.ToggleNfcStatusAsync(userId, ct));
 
     // ─── Keychains ─────────────────────────────────────────────────────
     [HttpGet("keychains")]
