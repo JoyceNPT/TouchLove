@@ -31,6 +31,7 @@ import {
 import axiosInstance from '../api/axiosInstance';
 import { useAuthStore } from '../store/authStore';
 import { toast } from '../store/useToastStore';
+import { copyToClipboardFallback } from '../utils/clipboard';
 
 interface NfcProfileData {
   id: string;
@@ -335,11 +336,16 @@ const NfcProfile = () => {
     }
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (profile?.inviteCode) {
-      navigator.clipboard.writeText(profile.inviteCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        await copyToClipboardFallback(profile.inviteCode);
+        setCopied(true);
+        toast.success('Đã sao chép mã ghép đôi!');
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        toast.error('Không thể sao chép');
+      }
     }
   };
 

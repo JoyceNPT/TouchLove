@@ -16,6 +16,7 @@ import {
 import axiosInstance from '../../api/axiosInstance';
 import { toast } from '../../store/useToastStore';
 import ConfirmModal from '../../components/shared/ConfirmModal';
+import { copyToClipboardFallback } from '../../utils/clipboard';
 
 interface Keychain {
   id: string;
@@ -39,6 +40,8 @@ const AdminKeychains = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [count, setCount] = useState(10);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedKeychainId, setExpandedKeychainId] = useState<string | null>(null);
   const [confirmConfig, setConfirmConfig] = useState({
@@ -52,8 +55,11 @@ const AdminKeychains = () => {
   const fetchKeychains = async () => {
     setIsLoading(true);
     try {
-      const res = await axiosInstance.get('/admin/keychains');
-      if (res.data.success) setKeychains(res.data.data.items);
+      const res = await axiosInstance.get(`/admin/keychains?page=${page}&size=20&search=${searchTerm}`);
+      if (res.data.success) {
+        setKeychains(res.data.data.items);
+        setTotalPages(res.data.data.totalPages);
+      }
     } catch (err) {
       console.error('Failed to fetch keychains', err);
     } finally {
@@ -63,7 +69,7 @@ const AdminKeychains = () => {
 
   useEffect(() => {
     fetchKeychains();
-  }, []);
+  }, [page, searchTerm]);
 
   const handleReactivate = async (keyId: string) => {
     setConfirmConfig({
@@ -140,9 +146,13 @@ const AdminKeychains = () => {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/activate/${text}`);
-    toast.success('Đã sao chép link kích hoạt!');
+  const copyToClipboard = async (text: string) => {
+    try {
+      await copyToClipboardFallback(`${window.location.origin}/nfc/${text}`);
+      toast.success('Đã sao chép link kích hoạt!');
+    } catch (err) {
+      toast.error('Không thể sao chép');
+    }
   };
 
   const filteredKeychains = keychains.filter(k => 
@@ -354,6 +364,62 @@ const AdminKeychains = () => {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-800/10">
+            <span className="text-sm text-zinc-500 font-medium">Trang {page} / {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50"
+              >
+                Trước
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => {
+                  // Chỉ hiển thị trang đầu, trang cuối và các trang xung quanh trang hiện tại
+                  if (
+                    p === 1 || 
+                    p === totalPages || 
+                    (p >= page - 1 && p <= page + 1)
+                  ) {
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`w-8 h-8 rounded-lg text-sm font-bold flex items-center justify-center transition-colors ${
+                          p === page 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  }
+                  
+                  // Hiển thị dấu ... cho các trang bị ẩn
+                  if (
+                    (p === 2 && page > 3) || 
+                    (p === totalPages - 1 && page < totalPages - 2)
+                  ) {
+                    return <span key={p} className="text-zinc-400">...</span>;
+                  }
+                  
+                  return null;
+                })}
+              </div>
+              <button 
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <ConfirmModal

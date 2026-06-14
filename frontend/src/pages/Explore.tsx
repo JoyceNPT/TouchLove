@@ -20,6 +20,7 @@ import * as signalR from '@microsoft/signalr';
 import axiosInstance from '../api/axiosInstance';
 import { toast } from '../store/useToastStore';
 import { useAuthStore } from '../store/authStore';
+import { copyToClipboardFallback } from '../utils/clipboard';
 
 interface PublicNfcProfile {
   displayName: string;
@@ -150,10 +151,15 @@ const Explore = () => {
 
   const isWaitingAsAcceptor = myProfile?.pairingPendingRole === 'acceptor';
 
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
+  const handleCopyCode = async (code: string) => {
+    try {
+      await copyToClipboardFallback(code);
+      setCopiedCode(code);
+      toast.success('Đã sao chép mã ghép đôi!');
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch (err) {
+      toast.error('Không thể sao chép');
+    }
   };
 
   const handlePairRequest = async (inviteCode: string) => {
