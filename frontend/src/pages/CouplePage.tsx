@@ -435,7 +435,7 @@ const CouplePage = () => {
 
     // Fetch Daily Message
     if (coupleId) {
-      axios.get(`/couples/${coupleId}/messages/today`)
+      axios.get(`/couples/${coupleId}/message/today`)
         .then(res => {
           if (res.data.success) {
             setDailyMessageObj(res.data.data);
