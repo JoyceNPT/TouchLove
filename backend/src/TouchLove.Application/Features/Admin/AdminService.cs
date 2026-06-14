@@ -266,12 +266,13 @@ public class AdminService
         if (!string.IsNullOrEmpty(category)) query = query.Where(t => t.Category == category);
 
         var total = await query.CountAsync(ct);
-        var items = await query.Skip((page - 1) * size).Take(size).Select(t => MapTemplate(t)).ToListAsync(ct);
+        var items = await query.OrderByDescending(t => t.CreatedAt).Skip((page - 1) * size).Take(size).Select(t => MapTemplate(t)).ToListAsync(ct);
+        return ApiResponse<PagedResult<TemplateDto>>.Ok(new PagedResult<TemplateDto> { Items = items, TotalCount = total, Page = page, PageSize = size });
+    }
 
-        return ApiResponse<PagedResult<TemplateDto>>.Ok(new PagedResult<TemplateDto>
-        {
-            Items = items, TotalCount = total, Page = page, PageSize = size
-        });
+    public async Task WipeAllMessagesAsync(CancellationToken ct = default)
+    {
+        await _db.DailyMessages.ExecuteDeleteAsync(ct);
     }
 
     private static TemplateDto MapTemplate(MessageTemplate t) =>

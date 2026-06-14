@@ -14,7 +14,7 @@ import axiosInstance from '../api/axiosInstance';
 interface DailyMessage {
   id: string;
   content: string;
-  sentAt: string;
+  date: string;
   isBookmarked: boolean;
 }
 
@@ -105,7 +105,7 @@ const MessagesHistory = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 text-zinc-500 text-sm font-bold">
                   <Calendar className="w-4 h-4" />
-                  {new Date(msg.sentAt).toLocaleDateString('vi-VN', { 
+                  {new Date(msg.date).toLocaleDateString('vi-VN', { 
                     day: 'numeric', 
                     month: 'long', 
                     year: 'numeric' 

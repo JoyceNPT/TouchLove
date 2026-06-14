@@ -12,6 +12,8 @@ import {
   Bell, 
   ArrowRight, 
   X, 
+  Bookmark,
+  BookmarkCheck,
   ChevronLeft, 
   ChevronRight, 
   Play, 
@@ -315,6 +317,8 @@ const CouplePage = () => {
   const [memoryViewMode, setMemoryViewMode] = useState<MemoryViewMode>('album');
 
   // Compute Ownership
+  const [dailyMessageObj, setDailyMessageObj] = useState<{ id: string; content: string; date: string; isBookmarked: boolean } | null>(null);
+
   const isOwner = !!user && !!data && (user.id === data.partnerAUserId || user.id === data.partnerBUserId);
   const isPartner = isOwner;
 
@@ -428,7 +432,29 @@ const CouplePage = () => {
 
   useEffect(() => {
     fetchCoupleData();
+
+    // Fetch Daily Message
+    if (coupleId) {
+      axios.get(`/couples/${coupleId}/messages/today`)
+        .then(res => {
+          if (res.data.success) {
+            setDailyMessageObj(res.data.data);
+          }
+        })
+        .catch(err => console.error("Failed to fetch today's message", err));
+    }
   }, [coupleId]);
+
+  const toggleDailyMessageBookmark = async () => {
+    if (!dailyMessageObj) return;
+    try {
+      await axios.post(`/messages/${dailyMessageObj.id}/bookmark`);
+      setDailyMessageObj(prev => prev ? { ...prev, isBookmarked: !prev.isBookmarked } : null);
+      toast.success(dailyMessageObj.isBookmarked ? 'Đã bỏ lưu thông điệp!' : 'Đã lưu thông điệp vào kho!');
+    } catch (err) {
+      toast.error('Lỗi khi lưu thông điệp');
+    }
+  };
 
   useEffect(() => {
     if (data?.id && !connectionRef.current) {
@@ -891,16 +917,32 @@ const CouplePage = () => {
               <h2 className="text-xl font-bold">Thông điệp hôm nay</h2>
             </div>
             {isOwner && (
-              <Link 
-                to={`/couple/${coupleId}/messages`}
-                className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
-              >
-                Xem lịch sử <ArrowRight className="w-4 h-4" />
-              </Link>
+              <div className="flex items-center gap-4">
+                {dailyMessageObj && (
+                  <button
+                    onClick={toggleDailyMessageBookmark}
+                    className={`p-2 rounded-xl transition-all ${
+                      dailyMessageObj.isBookmarked 
+                        ? 'bg-primary/10 text-primary' 
+                        : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400'
+                    }`}
+                    title={dailyMessageObj.isBookmarked ? "Bỏ lưu" : "Lưu vào kho"}
+                  >
+                    {dailyMessageObj.isBookmarked ? <BookmarkCheck className="w-5 h-5 fill-current" /> : <Bookmark className="w-5 h-5" />}
+                  </button>
+                )}
+                <Link 
+                  to={`/couple/${coupleId}/messages`}
+                  className="text-sm font-bold text-primary hover:underline flex items-center gap-1 bg-primary/10 px-3 py-1.5 rounded-lg"
+                >
+                  <Bookmark className="w-4 h-4" />
+                  Kho lưu trữ <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
             )}
           </div>
           <p className="text-xl md:text-2xl italic leading-relaxed text-zinc-700 dark:text-zinc-300 font-medium">
-            "{data.todayMessage || 'Hãy luôn yêu thương và trân trọng nhau nhé!'}"
+            "{dailyMessageObj?.content || data.todayMessage || 'Hãy luôn yêu thương và trân trọng nhau nhé!'}"
           </p>
         </motion.div>
       </section>

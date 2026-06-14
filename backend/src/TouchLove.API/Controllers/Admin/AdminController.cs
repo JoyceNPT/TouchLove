@@ -74,9 +74,16 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> PublishTemplate(Guid templateId, CancellationToken ct)
         => Ok(await _adminService.PublishTemplateAsync(templateId, ct));
 
-    [HttpPost("templates/{templateId:guid}/archive")]
-    public async Task<IActionResult> ArchiveTemplate(Guid templateId, CancellationToken ct)
-        => Ok(await _adminService.ArchiveTemplateAsync(templateId, ct));
+    [HttpPost("templates/{id:guid}/archive")]
+    public async Task<IActionResult> ArchiveTemplate(Guid id, CancellationToken ct)
+        => Ok(await _adminService.ArchiveTemplateAsync(id, ct));
+
+    [HttpDelete("messages/wipe-all")]
+    public async Task<IActionResult> WipeAllMessages(CancellationToken ct)
+    {
+        await _adminService.WipeAllMessagesAsync(ct);
+        return Ok("Đã xóa toàn bộ DailyMessages thành công.");
+    }
 }
 
 public record BulkCreateRequest(int Count);
