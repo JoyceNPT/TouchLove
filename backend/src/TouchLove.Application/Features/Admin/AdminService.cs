@@ -200,6 +200,22 @@ public class AdminService
         if (keychain == null)
             return ApiResponse<string>.Fail("Không tìm thấy móc khóa.");
 
+        // Kiểm tra xem móc khóa có đang nằm trong một Couple không
+        var coupleExists = await _db.Couples.AnyAsync(c => c.KeychainAId == keychainId || c.KeychainBId == keychainId, ct);
+        if (coupleExists)
+            return ApiResponse<string>.Fail("Móc khóa này đang nằm trong một không gian cặp đôi. Vui lòng Gỡ ghép đôi trước khi xóa.");
+
+        // Xóa thủ công các dữ liệu lịch sử/nhật ký có ràng buộc Foreign Key Restrict
+        var scanLogs = await _db.NfcScanLogs.Where(x => x.KeychainId == keychainId).ToListAsync(ct);
+        if (scanLogs.Any()) _db.NfcScanLogs.RemoveRange(scanLogs);
+
+        var invitations = await _db.PairingInvitations.Where(x => x.InitiatorKeychainId == keychainId || x.UsedByKeychainId == keychainId).ToListAsync(ct);
+        if (invitations.Any()) _db.PairingInvitations.RemoveRange(invitations);
+
+        var unpairReqs = await _db.UnpairRequests.Where(x => x.RequestedByKeychainId == keychainId || x.ConfirmedByKeychainId == keychainId).ToListAsync(ct);
+        if (unpairReqs.Any()) _db.UnpairRequests.RemoveRange(unpairReqs);
+
+        // Cuối cùng xóa móc khóa
         _db.Keychains.Remove(keychain);
         await _db.SaveChangesAsync(ct);
         return ApiResponse<string>.Ok("Xóa móc khóa thành công.");
