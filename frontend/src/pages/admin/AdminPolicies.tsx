@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FileText, Save, Globe } from 'lucide-react';
 import { toast } from '../../store/useToastStore';
 import { axiosInstance } from '../../api/axiosInstance';
@@ -13,14 +13,14 @@ const AdminPolicies = () => {
     en: { terms: '', privacy: '', nfcGuide: '' }
   });
 
-  const config = {
+  const config = useMemo(() => ({
     readonly: false,
     height: 500,
     enableDragAndDropFileToEditor: true,
     uploader: {
       insertImageAsBase64URI: true
     }
-  };
+  }), []);
 
   useEffect(() => {
     fetchPolicies();
