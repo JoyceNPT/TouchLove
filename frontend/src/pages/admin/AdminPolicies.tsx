@@ -2,15 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Save, Globe } from 'lucide-react';
 import { toast } from '../../store/useToastStore';
 import { axiosInstance } from '../../api/axiosInstance';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const AdminPolicies = () => {
   const [activeLang, setActiveLang] = useState<'vi' | 'en'>('vi');
   const [isLoading, setIsLoading] = useState(true);
   
   const [policies, setPolicies] = useState({
-    vi: { terms: '', privacy: '' },
-    en: { terms: '', privacy: '' }
+    vi: { terms: '', privacy: '', nfcGuide: '' },
+    en: { terms: '', privacy: '', nfcGuide: '' }
   });
+
+  const modules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['link', 'image', 'video'],
+      ['clean']
+    ],
+  };
 
   useEffect(() => {
     fetchPolicies();
@@ -18,21 +31,25 @@ const AdminPolicies = () => {
 
   const fetchPolicies = async () => {
     try {
-      const [resTermsVi, resPrivacyVi, resTermsEn, resPrivacyEn] = await Promise.all([
+      const [resTermsVi, resPrivacyVi, resNfcVi, resTermsEn, resPrivacyEn, resNfcEn] = await Promise.all([
         axiosInstance.get('/policies/TERMS/vi'),
         axiosInstance.get('/policies/PRIVACY/vi'),
+        axiosInstance.get('/policies/NFC_GUIDE/vi'),
         axiosInstance.get('/policies/TERMS/en'),
-        axiosInstance.get('/policies/PRIVACY/en')
+        axiosInstance.get('/policies/PRIVACY/en'),
+        axiosInstance.get('/policies/NFC_GUIDE/en')
       ]);
 
       setPolicies({
         vi: {
-          terms: resTermsVi.data.data.content || '',
-          privacy: resPrivacyVi.data.data.content || ''
+          terms: resTermsVi.data?.data?.content || '',
+          privacy: resPrivacyVi.data?.data?.content || '',
+          nfcGuide: resNfcVi.data?.data?.content || ''
         },
         en: {
-          terms: resTermsEn.data.data.content || '',
-          privacy: resPrivacyEn.data.data.content || ''
+          terms: resTermsEn.data?.data?.content || '',
+          privacy: resPrivacyEn.data?.data?.content || '',
+          nfcGuide: resNfcEn.data?.data?.content || ''
         }
       });
     } catch (error) {
@@ -47,8 +64,10 @@ const AdminPolicies = () => {
       await Promise.all([
         axiosInstance.put('/admin/policies/TERMS/vi', { content: policies.vi.terms }),
         axiosInstance.put('/admin/policies/PRIVACY/vi', { content: policies.vi.privacy }),
+        axiosInstance.put('/admin/policies/NFC_GUIDE/vi', { content: policies.vi.nfcGuide }),
         axiosInstance.put('/admin/policies/TERMS/en', { content: policies.en.terms }),
-        axiosInstance.put('/admin/policies/PRIVACY/en', { content: policies.en.privacy })
+        axiosInstance.put('/admin/policies/PRIVACY/en', { content: policies.en.privacy }),
+        axiosInstance.put('/admin/policies/NFC_GUIDE/en', { content: policies.en.nfcGuide })
       ]);
       toast.success('Lưu chính sách thành công!');
     } catch (error) {
@@ -56,7 +75,7 @@ const AdminPolicies = () => {
     }
   };
 
-  const handleChange = (field: 'terms' | 'privacy', value: string) => {
+  const handleChange = (field: 'terms' | 'privacy' | 'nfcGuide', value: string) => {
     setPolicies(prev => ({
       ...prev,
       [activeLang]: {
@@ -108,31 +127,38 @@ const AdminPolicies = () => {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        {/* Terms */}
-        <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm flex flex-col h-[600px]">
-          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <Globe className="w-5 h-5 text-blue-500" />
-            Điều khoản Dịch vụ (Terms of Service)
-          </h3>
-          <textarea
-            value={policies[activeLang].terms}
-            onChange={(e) => handleChange('terms', e.target.value)}
-            className="w-full flex-1 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 resize-none outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
-          />
-        </div>
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-sm border border-zinc-200 dark:border-zinc-800">
+            <h2 className="text-xl font-bold mb-4">Điều khoản sử dụng</h2>
+            <ReactQuill 
+              theme="snow"
+              value={policies[activeLang].terms} 
+              onChange={(val) => handleChange('terms', val)} 
+              modules={modules}
+              className="bg-white dark:bg-zinc-800 rounded-xl"
+            />
+          </div>
 
-        {/* Privacy */}
-        <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm flex flex-col h-[600px]">
-          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <Globe className="w-5 h-5 text-green-500" />
-            Chính sách Bảo mật (Privacy Policy)
-          </h3>
-          <textarea
-            value={policies[activeLang].privacy}
-            onChange={(e) => handleChange('privacy', e.target.value)}
-            className="w-full flex-1 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 resize-none outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
-          />
-        </div>
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-sm border border-zinc-200 dark:border-zinc-800">
+            <h2 className="text-xl font-bold mb-4">Chính sách bảo mật</h2>
+            <ReactQuill 
+              theme="snow"
+              value={policies[activeLang].privacy} 
+              onChange={(val) => handleChange('privacy', val)} 
+              modules={modules}
+              className="bg-white dark:bg-zinc-800 rounded-xl"
+            />
+          </div>
+          
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-sm border border-zinc-200 dark:border-zinc-800">
+            <h2 className="text-xl font-bold mb-4">Hướng dẫn sử dụng NFC</h2>
+            <ReactQuill 
+              theme="snow"
+              value={policies[activeLang].nfcGuide} 
+              onChange={(val) => handleChange('nfcGuide', val)} 
+              modules={modules}
+              className="bg-white dark:bg-zinc-800 rounded-xl"
+            />
+          </div>
       </div>
     </div>
   );
