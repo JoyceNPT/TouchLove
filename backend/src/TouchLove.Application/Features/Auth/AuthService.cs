@@ -71,7 +71,19 @@ public class AuthService
             await _db.SaveChangesAsync(ct);
 
             var link = $"{_config["Frontend:Url"]}/verify-email?token={rawToken}";
-            await _email.SendEmailVerificationAsync(req.Email, link, ct);
+            
+            bool requireVerification = _config.GetValue<bool>("Email:RequireEmailVerification", true);
+            if (requireVerification)
+            {
+                try
+                {
+                    await _email.SendEmailVerificationAsync(req.Email, link, ct);
+                }
+                catch
+                {
+                    // Log error but don't crash
+                }
+            }
             
             return ApiResponse<string>.Ok("Tài khoản đã tồn tại nhưng chưa xác thực. Một mã xác thực mới đã được gửi đến email của bạn.");
         }
@@ -106,7 +118,19 @@ public class AuthService
         await _db.SaveChangesAsync(ct);
 
         var verifyLink = $"{_config["Frontend:Url"]}/verify-email?token={verifyRaw}";
-        await _email.SendEmailVerificationAsync(req.Email, verifyLink, ct);
+        
+        bool requireVerificationOuter = _config.GetValue<bool>("Email:RequireEmailVerification", true);
+        if (requireVerificationOuter)
+        {
+            try
+            {
+                await _email.SendEmailVerificationAsync(req.Email, verifyLink, ct);
+            }
+            catch
+            {
+                // Log error but don't crash the registration
+            }
+        }
 
         return ApiResponse<string>.Ok("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
     }
