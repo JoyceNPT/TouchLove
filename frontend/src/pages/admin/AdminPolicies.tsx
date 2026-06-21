@@ -129,7 +129,7 @@ const AdminPolicies = () => {
             <JoditEditor
               value={policies[activeLang].terms} 
               config={config}
-              onBlur={(val) => handleChange('terms', val)} 
+              onChange={(val) => handleChange('terms', val)} 
             />
           </div>
 
@@ -138,7 +138,7 @@ const AdminPolicies = () => {
             <JoditEditor
               value={policies[activeLang].privacy} 
               config={config}
-              onBlur={(val) => handleChange('privacy', val)} 
+              onChange={(val) => handleChange('privacy', val)} 
             />
           </div>
           
@@ -147,7 +147,7 @@ const AdminPolicies = () => {
             <JoditEditor
               value={policies[activeLang].nfcGuide} 
               config={config}
-              onBlur={(val) => handleChange('nfcGuide', val)} 
+              onChange={(val) => handleChange('nfcGuide', val)} 
             />
           </div>
       </div>
