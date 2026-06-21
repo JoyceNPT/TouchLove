@@ -52,8 +52,10 @@ public class AuthService
         var existing = await _userManager.FindByEmailAsync(req.Email);
         if (existing != null)
         {
-            if (existing.IsEmailVerified)
-                return ApiResponse<string>.Fail("Email này đã được đăng ký và xác thực. Vui lòng đăng nhập.");
+            bool requireVerificationCheck = _config.GetValue<bool>("Email:RequireEmailVerification", true);
+            
+            if (existing.IsEmailVerified || !requireVerificationCheck)
+                return ApiResponse<string>.Fail("Email này đã được đăng ký. Vui lòng đăng nhập.");
             
             // Re-send verification for unverified users
             var oldTokens = await _db.EmailVerificationTokens

@@ -164,7 +164,9 @@ try
     // ── CORS ──────────────────────────────────────────────────────────
     builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
     {
-        p.WithOrigins(builder.Configuration["Frontend:Url"] ?? "http://localhost:3000")
+        var mainFrontend = builder.Configuration["Frontend:Url"] ?? "http://localhost:3000";
+        var wwwFrontend = mainFrontend.Replace("https://", "https://www.");
+        p.WithOrigins(mainFrontend, wwwFrontend)
          .AllowAnyHeader()
          .AllowAnyMethod()
          .AllowCredentials(); // Required for HttpOnly cookies
