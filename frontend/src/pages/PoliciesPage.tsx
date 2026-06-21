@@ -11,7 +11,8 @@ const PoliciesPage = () => {
   const { i18n } = useTranslation();
 
   useEffect(() => {
-    fetchPolicy(activeTab, i18n.language || 'vi');
+    const langCode = i18n.language?.startsWith('en') ? 'en' : 'vi';
+    fetchPolicy(activeTab, langCode);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab, i18n.language]);
 
