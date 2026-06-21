@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Save, Globe } from 'lucide-react';
 import { toast } from '../../store/useToastStore';
 import { axiosInstance } from '../../api/axiosInstance';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import JoditEditor from 'jodit-react';
 
 const AdminPolicies = () => {
   const [activeLang, setActiveLang] = useState<'vi' | 'en'>('vi');
@@ -14,15 +13,13 @@ const AdminPolicies = () => {
     en: { terms: '', privacy: '', nfcGuide: '' }
   });
 
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['link', 'image', 'video'],
-      ['clean']
-    ],
+  const config = {
+    readonly: false,
+    height: 500,
+    enableDragAndDropFileToEditor: true,
+    uploader: {
+      insertImageAsBase64URI: true
+    }
   };
 
   useEffect(() => {
@@ -129,34 +126,28 @@ const AdminPolicies = () => {
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-sm border border-zinc-200 dark:border-zinc-800">
             <h2 className="text-xl font-bold mb-4">Điều khoản sử dụng</h2>
-            <ReactQuill 
-              theme="snow"
+            <JoditEditor
               value={policies[activeLang].terms} 
-              onChange={(val) => handleChange('terms', val)} 
-              modules={modules}
-              className="bg-white dark:bg-zinc-800 rounded-xl"
+              config={config}
+              onBlur={(val) => handleChange('terms', val)} 
             />
           </div>
 
           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-sm border border-zinc-200 dark:border-zinc-800">
             <h2 className="text-xl font-bold mb-4">Chính sách bảo mật</h2>
-            <ReactQuill 
-              theme="snow"
+            <JoditEditor
               value={policies[activeLang].privacy} 
-              onChange={(val) => handleChange('privacy', val)} 
-              modules={modules}
-              className="bg-white dark:bg-zinc-800 rounded-xl"
+              config={config}
+              onBlur={(val) => handleChange('privacy', val)} 
             />
           </div>
           
           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-sm border border-zinc-200 dark:border-zinc-800">
             <h2 className="text-xl font-bold mb-4">Hướng dẫn sử dụng NFC</h2>
-            <ReactQuill 
-              theme="snow"
+            <JoditEditor
               value={policies[activeLang].nfcGuide} 
-              onChange={(val) => handleChange('nfcGuide', val)} 
-              modules={modules}
-              className="bg-white dark:bg-zinc-800 rounded-xl"
+              config={config}
+              onBlur={(val) => handleChange('nfcGuide', val)} 
             />
           </div>
       </div>

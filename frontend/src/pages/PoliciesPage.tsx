@@ -12,6 +12,7 @@ const PoliciesPage = () => {
 
   useEffect(() => {
     fetchPolicy(activeTab, i18n.language || 'vi');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab, i18n.language]);
 
   const fetchPolicy = async (tab: 'terms' | 'privacy' | 'nfcGuide', lang: string) => {
