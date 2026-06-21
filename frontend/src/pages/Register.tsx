@@ -54,8 +54,15 @@ const Register = () => {
         if (response.data.errors) setDetails(response.data.errors);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Đã có lỗi xảy ra. Vui lòng thử lại.');
-      if (err.response?.data?.errors) setDetails(err.response?.data?.errors);
+      const errorMsg = err.response?.data?.message || 
+                       err.response?.data?.title || 
+                       (err.response?.status === 500 ? 'Lỗi Server (500). Vui lòng báo Admin.' : null) ||
+                       err.message || 
+                       'Đã có lỗi xảy ra. Vui lòng thử lại.';
+      setError(`[Lỗi] ${errorMsg}`);
+      if (err.response?.data?.errors) {
+         setDetails(Array.isArray(err.response.data.errors) ? err.response.data.errors : Object.values(err.response.data.errors).flat() as string[]);
+      }
     } finally {
       setIsLoading(false);
     }
