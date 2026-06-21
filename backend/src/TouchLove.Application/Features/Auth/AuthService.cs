@@ -139,7 +139,8 @@ public class AuthService
         if (!user.IsSalesActive)
             return ApiResponse<LoginResponse>.Fail("Your account has been suspended. Please contact support.");
 
-        if (!user.IsEmailVerified)
+        bool requireVerification = _config.GetValue<bool>("Email:RequireEmailVerification", true);
+        if (requireVerification && !user.IsEmailVerified)
             return ApiResponse<LoginResponse>.Fail("Vui lòng xác thực email trước khi đăng nhập.", new List<string> { "UNVERIFIED_EMAIL" });
 
         // Clear failed attempts

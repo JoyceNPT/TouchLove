@@ -69,16 +69,15 @@ const Register = () => {
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
         </div>
-        <h2 className="text-3xl font-bold">Kiểm tra Email</h2>
+        <h2 className="text-3xl font-bold">Đăng ký thành công!</h2>
         <p className="text-muted-foreground leading-relaxed">
-          Chúng mình đã gửi một liên kết xác thực đến email của bạn. 
-          Vui lòng kiểm tra hộp thư (và cả thư rác) để kích hoạt tài khoản nhé!
+          Tài khoản của bạn đã được tạo thành công. Bạn có thể đăng nhập ngay bây giờ để trải nghiệm TouchLove!
         </p>
         <button
           onClick={() => navigate('/login')}
           className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
         >
-          Quay lại Đăng nhập
+          Đăng nhập ngay
         </button>
       </div>
     );

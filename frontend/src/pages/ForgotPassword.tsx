@@ -12,17 +12,18 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      await axios.post('/api/auth/forgot-password', { email });
-      setSubmitted(true);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.');
-    } finally {
-      setLoading(false);
-    }
+    setError('Tính năng đang bảo trì. Vui lòng liên hệ hỗ trợ viên.');
+    // Tạm thời vô hiệu hóa API call do SES chưa hoạt động
+    // setLoading(true);
+    // setError('');
+    // try {
+    //   await axios.post('/api/auth/forgot-password', { email });
+    //   setSubmitted(true);
+    // } catch (err: any) {
+    //   setError(err.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.');
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   return (
