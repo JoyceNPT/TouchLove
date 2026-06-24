@@ -46,8 +46,10 @@ public class GeminiAiMessageService : IAiMessageService
             };
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={apiKey}";
+            
+            var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
             var response = await _httpClient.PostAsync(url,
-                new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"), ct);
+                new StringContent(JsonSerializer.Serialize(requestBody, options), Encoding.UTF8, "application/json"), ct);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -56,19 +58,33 @@ public class GeminiAiMessageService : IAiMessageService
             }
 
             var json = await response.Content.ReadAsStringAsync(ct);
-            using var doc = JsonDocument.Parse(json);
-            var text = doc.RootElement
-                .GetProperty("candidates")[0]
-                .GetProperty("content")
-                .GetProperty("parts")[0]
-                .GetProperty("text")
-                .GetString();
-
-            return text?.Trim();
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("candidates", out var candidates) &&
+                    candidates.GetArrayLength() > 0 &&
+                    candidates[0].TryGetProperty("content", out var content) &&
+                    content.TryGetProperty("parts", out var parts) &&
+                    parts.GetArrayLength() > 0 &&
+                    parts[0].TryGetProperty("text", out var textProp))
+                {
+                    return textProp.GetString()?.Trim();
+                }
+                else
+                {
+                    _logger.LogWarning("Unexpected Gemini response format: {Json}", json);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse Gemini JSON: {Json}", json);
+                return null;
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate AI message for couple {CoupleName}", coupleName);
+            _logger.LogError(ex, "Failed to call Gemini API for couple {CoupleName}", coupleName);
             return null;
         }
     }

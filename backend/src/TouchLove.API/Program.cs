@@ -148,7 +148,15 @@ try
     {
         builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
     }
-    builder.Services.AddScoped<IEmailService, MailKitEmailService>();
+    var emailProvider = builder.Configuration["Email:Provider"] ?? "Smtp";
+    if (emailProvider.Equals("SendGrid", StringComparison.OrdinalIgnoreCase))
+    {
+        builder.Services.AddScoped<IEmailService, SendGridEmailService>();
+    }
+    else
+    {
+        builder.Services.AddScoped<IEmailService, MailKitEmailService>();
+    }
 
     builder.Services.AddHttpClient<IAiMessageService, GeminiAiMessageService>();
     builder.Services.AddHttpClient<ICaptchaService, GoogleRecaptchaService>();
