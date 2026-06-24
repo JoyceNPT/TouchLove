@@ -78,7 +78,7 @@ const Register = () => {
         </div>
         <h2 className="text-3xl font-bold">Đăng ký thành công!</h2>
         <p className="text-muted-foreground leading-relaxed">
-          Tài khoản của bạn đã được tạo thành công. Bạn có thể đăng nhập ngay bây giờ để trải nghiệm TouchLove!
+          Tài khoản của bạn đã được tạo. Vui lòng kiểm tra hộp thư email (bao gồm cả thư rác/spam) và click vào link xác thực để kích hoạt tài khoản.
         </p>
         <button
           onClick={() => navigate('/login')}
