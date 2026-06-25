@@ -41,6 +41,7 @@ interface NfcProfileData {
   gender?: string;
   dateOfBirth?: string; // YYYY-MM-DD
   bio?: string;
+  email?: string;
   nfcPassword?: string;
   isProfilePublic: boolean;
   userType: string;
@@ -88,6 +89,7 @@ const NfcProfile = () => {
   const [gender, setGender] = useState('Nam');
   const [dob, setDob] = useState('');
   const [bio, setBio] = useState('');
+  const [email, setEmail] = useState('');
   const [nfcPassword, setNfcPassword] = useState('');
   const [isProfilePublic, setIsProfilePublic] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +120,7 @@ const NfcProfile = () => {
         setGender(data.gender || 'Nam');
         setDob(data.dateOfBirth || '');
         setBio(data.bio || '');
+        setEmail(data.email || '');
         setNfcPassword(data.nfcPassword || '');
         setIsProfilePublic(data.isProfilePublic);
 
@@ -218,6 +221,7 @@ const NfcProfile = () => {
         gender,
         dateOfBirth: dob ? dob : null,
         bio,
+        email,
         isProfilePublic,
         nfcPassword: nfcPassword ? nfcPassword : null
       });
@@ -739,6 +743,16 @@ const NfcProfile = () => {
                           </button>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Email */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email nhận thông báo (Không bắt buộc)</label>
+                      <input
+                        type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Nhập email của bạn..."
+                        className="w-full px-4 py-3 bg-secondary dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl outline-none focus:ring-2 focus:ring-primary font-medium text-zinc-700 dark:text-zinc-300"
+                      />
                     </div>
 
                     {/* Bio */}

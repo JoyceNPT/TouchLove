@@ -96,7 +96,8 @@ public class NfcProfileController : ControllerBase
             CoupleId: keychain.CoupleId,
             PairingPendingRole: pairingPending?.Role,
             PairingPendingPartnerName: pairingPending?.PartnerName,
-            PairingPendingInvitationId: pairingPending?.InvitationId
+            PairingPendingInvitationId: pairingPending?.InvitationId,
+            Email: user.Email
         );
 
         return Ok(ApiResponse<NfcProfileDto>.Ok(profile));
@@ -118,6 +119,18 @@ public class NfcProfileController : ControllerBase
         user.DateOfBirth = req.DateOfBirth;
         user.Bio = req.Bio;
         user.IsProfilePublic = req.IsProfilePublic;
+
+        if (!string.IsNullOrEmpty(req.Email) && user.Email != req.Email && user.UserName != req.Email)
+        {
+            var existingUser = await _userManager.FindByEmailAsync(req.Email);
+            if (existingUser != null && existingUser.Id != user.Id)
+                return BadRequest(ApiResponse<string>.Fail("Email này đã được sử dụng bởi người khác."));
+            
+            user.Email = req.Email;
+            user.UserName = req.Email;
+            user.NormalizedEmail = req.Email.ToUpper();
+            user.NormalizedUserName = req.Email.ToUpper();
+        }
 
         // Set or remove passcode (6 digits PIN only, or alphanumeric)
         if (!string.IsNullOrEmpty(req.NfcPassword))
@@ -460,7 +473,8 @@ public record NfcProfileDto(
     Guid? CoupleId = null,
     string? PairingPendingRole = null,
     string? PairingPendingPartnerName = null,
-    Guid? PairingPendingInvitationId = null
+    Guid? PairingPendingInvitationId = null,
+    string? Email = null
 );
 
 public record UpdateNfcProfileRequest(
@@ -470,7 +484,8 @@ public record UpdateNfcProfileRequest(
     DateOnly? DateOfBirth,
     string? Bio,
     bool IsProfilePublic,
-    string? NfcPassword
+    string? NfcPassword,
+    string? Email
 );
 
 public record PublicNfcProfileDto(
