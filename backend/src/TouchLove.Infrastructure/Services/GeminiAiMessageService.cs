@@ -30,7 +30,7 @@ public class GeminiAiMessageService : IAiMessageService
 
         try
         {
-            var prompt = $"Hãy viết một thông điệp tình yêu lãng mạn dành cho tình yêu của {coupleName} (đã yêu nhau {daysTogether} ngày), CHỈ GỒM DUY NHẤT 1 CÂU VĂN (không quá 25 từ). {context} Lãng mạn, chân thật, sâu sắc, không sáo rỗng, không dùng từ ngữ khuôn mẫu kiểu thiệp chúc mừng. YÊU CẦU BẮT BUỘC: CHỈ TRẢ VỀ ĐÚNG NỘI DUNG THÔNG ĐIỆP DƯỚI DẠNG 1 CÂU DUY NHẤT, KẾT THÚC BẰNG DẤU CHẤM, CHẤM THAN HOẶC DẤU BA CHẤM. Tuyệt đối không xuống dòng, không dùng dấu chấm câu để tách thành nhiều câu, không xưng hô hay gọi tên ở đầu câu (VD: KHÔNG dùng '{coupleName} ơi', 'Gửi...', 'Chào...'), không giải thích, không đưa ra danh sách lựa chọn, không markdown, không icon/emoji.";
+            var prompt = $"Hãy sáng tác một câu châm ngôn tình yêu thật lãng mạn, sâu sắc, ngắn gọn (không quá 25 từ) để dành tặng cho người yêu. {context} Yêu cầu: Viết như một lời thủ thỉ chân thành, mở đầu trực tiếp vào câu nói. TUYỆT ĐỐI CHỈ TRẢ VỀ 1 CÂU DUY NHẤT, KẾT THÚC BẰNG DẤU CHẤM, CHẤM THAN HOẶC DẤU BA CHẤM. Tuyệt đối không xuống dòng, không dùng dấu chấm câu để tách thành nhiều câu, không xưng hô hay gọi tên ở đầu câu, không giải thích, không đưa ra danh sách lựa chọn, không markdown, không icon/emoji.";
 
             var requestBody = new
             {
