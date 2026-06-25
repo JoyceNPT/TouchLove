@@ -40,8 +40,7 @@ public class GeminiAiMessageService : IAiMessageService
                 },
                 generationConfig = new
                 {
-                    temperature = 0.9,
-                    maxOutputTokens = 200
+                    temperature = 0.9
                 }
             };
 
