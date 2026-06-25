@@ -30,7 +30,7 @@ public class GeminiAiMessageService : IAiMessageService
 
         try
         {
-            var prompt = $"Tạo một thông điệp tình cảm ngắn gọn (2-3 câu, tiếng Việt) cho cặp đôi tên {coupleName}, đã yêu nhau {daysTogether} ngày. {context} Lãng mạn, ấm áp, chân thật, không sáo rỗng. YÊU CẦU BẮT BUỘC: CHỈ TRẢ VỀ ĐÚNG 1 ĐOẠN VĂN BẢN CHỨA THÔNG ĐIỆP ĐÓ. Tuyệt đối không chào hỏi, không giải thích, không đưa ra danh sách các lựa chọn.";
+            var prompt = $"Hãy viết một thông điệp tình yêu lãng mạn dành cho tình yêu của {coupleName} (đã yêu nhau {daysTogether} ngày), CHỈ GỒM DUY NHẤT 1 CÂU VĂN (không quá 25 từ). {context} Lãng mạn, chân thật, sâu sắc, không sáo rỗng, không dùng từ ngữ khuôn mẫu kiểu thiệp chúc mừng. YÊU CẦU BẮT BUỘC: CHỈ TRẢ VỀ ĐÚNG NỘI DUNG THÔNG ĐIỆP DƯỚI DẠNG 1 CÂU DUY NHẤT, KẾT THÚC BẰNG DẤU CHẤM, CHẤM THAN HOẶC DẤU BA CHẤM. Tuyệt đối không xuống dòng, không dùng dấu chấm câu để tách thành nhiều câu, không xưng hô hay gọi tên ở đầu câu (VD: KHÔNG dùng '{coupleName} ơi', 'Gửi...', 'Chào...'), không giải thích, không đưa ra danh sách lựa chọn, không markdown, không icon/emoji.";
 
             var requestBody = new
             {
@@ -69,7 +69,16 @@ public class GeminiAiMessageService : IAiMessageService
                     parts.GetArrayLength() > 0 &&
                     parts[0].TryGetProperty("text", out var textProp))
                 {
-                    return textProp.GetString()?.Trim();
+                    var message = textProp.GetString()?.Trim();
+                    if (!string.IsNullOrEmpty(message))
+                    {
+                        var firstSentenceEnd = message.IndexOfAny(new[] { '.', '!', '…', '?' });
+                        if (firstSentenceEnd > 0 && firstSentenceEnd < message.Length - 1)
+                        {
+                            message = message.Substring(0, firstSentenceEnd + 1);
+                        }
+                    }
+                    return message;
                 }
                 else
                 {
