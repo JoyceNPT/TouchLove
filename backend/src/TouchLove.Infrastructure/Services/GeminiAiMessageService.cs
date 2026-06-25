@@ -59,6 +59,7 @@ public class GeminiAiMessageService : IAiMessageService
             }
 
             var json = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogInformation("RAW GEMINI JSON: {Json}", json);
             try
             {
                 using var doc = JsonDocument.Parse(json);
