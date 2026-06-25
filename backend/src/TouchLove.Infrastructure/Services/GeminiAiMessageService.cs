@@ -66,11 +66,17 @@ public class GeminiAiMessageService : IAiMessageService
                     candidates.GetArrayLength() > 0 &&
                     candidates[0].TryGetProperty("content", out var content) &&
                     content.TryGetProperty("parts", out var parts) &&
-                    parts.GetArrayLength() > 0 &&
-                    parts[0].TryGetProperty("text", out var textProp))
+                    parts.GetArrayLength() > 0)
                 {
-                    var message = textProp.GetString()?.Trim();
-                    return message;
+                    var sb = new StringBuilder();
+                    foreach (var part in parts.EnumerateArray())
+                    {
+                        if (part.TryGetProperty("text", out var textProp))
+                        {
+                            sb.Append(textProp.GetString());
+                        }
+                    }
+                    return sb.ToString().Trim();
                 }
                 else
                 {
