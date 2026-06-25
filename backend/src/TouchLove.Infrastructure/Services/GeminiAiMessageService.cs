@@ -70,14 +70,6 @@ public class GeminiAiMessageService : IAiMessageService
                     parts[0].TryGetProperty("text", out var textProp))
                 {
                     var message = textProp.GetString()?.Trim();
-                    if (!string.IsNullOrEmpty(message))
-                    {
-                        var firstSentenceEnd = message.IndexOfAny(new[] { '.', '!', '…', '?' });
-                        if (firstSentenceEnd > 0 && firstSentenceEnd < message.Length - 1)
-                        {
-                            message = message.Substring(0, firstSentenceEnd + 1);
-                        }
-                    }
                     return message;
                 }
                 else
