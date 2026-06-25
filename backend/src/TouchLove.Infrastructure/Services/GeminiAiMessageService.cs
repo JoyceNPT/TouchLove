@@ -21,7 +21,7 @@ public class GeminiAiMessageService : IAiMessageService
 
     public async Task<string?> GenerateAsync(string coupleName, int daysTogether, CancellationToken ct = default, string? context = null)
     {
-        var apiKey = _config["Gemini:ApiKey"];
+        var apiKey = _config["Gemini:ApiKey"]?.Trim();
         if (string.IsNullOrEmpty(apiKey))
         {
             _logger.LogWarning("Gemini API key not configured. Returning null.");
@@ -45,7 +45,7 @@ public class GeminiAiMessageService : IAiMessageService
                 }
             };
 
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={apiKey}";
             
             var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
             var response = await _httpClient.PostAsync(url,
@@ -53,7 +53,8 @@ public class GeminiAiMessageService : IAiMessageService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Gemini API returned {StatusCode}", response.StatusCode);
+                var body = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogError("Gemini API returned {StatusCode}: {Body}", response.StatusCode, body);
                 return null;
             }
 
