@@ -30,7 +30,7 @@ public class GeminiAiMessageService : IAiMessageService
 
         try
         {
-            var prompt = $"Tạo một thông điệp tình cảm ngắn gọn (2-3 câu, tiếng Việt) cho cặp đôi tên {coupleName}, đã yêu nhau {daysTogether} ngày. {context} Lãng mạn, ấm áp, chân thật, không sáo rỗng.";
+            var prompt = $"Tạo một thông điệp tình cảm ngắn gọn (2-3 câu, tiếng Việt) cho cặp đôi tên {coupleName}, đã yêu nhau {daysTogether} ngày. {context} Lãng mạn, ấm áp, chân thật, không sáo rỗng. YÊU CẦU BẮT BUỘC: CHỈ TRẢ VỀ ĐÚNG 1 ĐOẠN VĂN BẢN CHỨA THÔNG ĐIỆP ĐÓ. Tuyệt đối không chào hỏi, không giải thích, không đưa ra danh sách các lựa chọn.";
 
             var requestBody = new
             {
