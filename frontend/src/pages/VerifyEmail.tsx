@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../api/axiosInstance';
 import { motion } from 'framer-motion';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
@@ -23,7 +23,7 @@ const VerifyEmail = () => {
       }
 
       try {
-        const response = await axios.get(`/api/auth/verify-email?token=${token}`);
+        const response = await axiosInstance.get(`/auth/verify-email?token=${token}`);
         if (response.data.success) {
           setStatus('success');
           setMessage('Chúc mừng! Email của bạn đã được xác thực thành công.');
@@ -51,7 +51,7 @@ const VerifyEmail = () => {
     if (!expiredEmail) return;
     setIsResending(true);
     try {
-      const response = await axios.post('/api/auth/resend-verification', { email: expiredEmail });
+      const response = await axiosInstance.post('/auth/resend-verification', { email: expiredEmail });
       if (response.data.success) {
         setMessage('Đã gửi lại link xác nhận. Vui lòng kiểm tra email của bạn.');
         setExpiredEmail(null);

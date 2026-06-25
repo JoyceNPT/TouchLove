@@ -139,6 +139,11 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
+    
+    // Bỏ qua nếu đang ở trang verify-email hoặc reset-password (vì các trang này dùng token cho mục đích khác, không phải là JWT Auth Token)
+    const path = window.location.pathname;
+    if (path.includes('/verify-email') || path.includes('/reset-password')) return;
+
     if (!urlToken) return;
 
     localStorage.setItem('accessToken', urlToken);

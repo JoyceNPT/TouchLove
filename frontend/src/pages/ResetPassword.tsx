@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react';
-import axios from 'axios';
+import axiosInstance from '../api/axiosInstance';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -29,7 +29,7 @@ const ResetPassword = () => {
     setError('');
 
     try {
-      const response = await axios.post('/api/auth/reset-password', {
+      const response = await axiosInstance.post('/auth/reset-password', {
         token,
         newPassword
       });
@@ -54,7 +54,7 @@ const ResetPassword = () => {
     if (!expiredEmail) return;
     setIsResending(true);
     try {
-      const response = await axios.post('/api/auth/forgot-password', { email: expiredEmail });
+      const response = await axiosInstance.post('/auth/forgot-password', { email: expiredEmail });
       if (response.data.success) {
         setError('Đã gửi lại link đặt lại mật khẩu. Vui lòng kiểm tra email.');
         setExpiredEmail(null);
