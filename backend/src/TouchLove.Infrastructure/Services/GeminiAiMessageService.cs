@@ -30,7 +30,7 @@ public class GeminiAiMessageService : IAiMessageService
 
         try
         {
-            var prompt = $"Hãy sáng tác một câu châm ngôn tình yêu thật lãng mạn, sâu sắc, ngắn gọn (không quá 25 từ) để dành tặng cho người yêu. {context} Yêu cầu: Viết như một lời thủ thỉ chân thành, mở đầu trực tiếp vào câu nói. TUYỆT ĐỐI CHỈ TRẢ VỀ 1 CÂU DUY NHẤT, KẾT THÚC BẰNG DẤU CHẤM, CHẤM THAN HOẶC DẤU BA CHẤM. Tuyệt đối không xuống dòng, không dùng dấu chấm câu để tách thành nhiều câu, không xưng hô hay gọi tên ở đầu câu, không giải thích, không đưa ra danh sách lựa chọn, không markdown, không icon/emoji.";
+            var prompt = $"Viết duy nhất 1 câu văn lãng mạn, ngắn gọn (dưới 20 từ) để làm thông điệp tình yêu mỗi ngày. {context} Yêu cầu: Viết trực tiếp nội dung câu nói. Không chào hỏi, không chứa ký tự đặc biệt, không giải thích.";
 
             var requestBody = new
             {
