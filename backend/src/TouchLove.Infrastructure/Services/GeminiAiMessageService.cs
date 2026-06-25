@@ -30,7 +30,7 @@ public class GeminiAiMessageService : IAiMessageService
 
         try
         {
-            var prompt = $"Viết duy nhất 1 câu văn lãng mạn, ngắn gọn (dưới 20 từ) để làm thông điệp tình yêu mỗi ngày. {context} Yêu cầu: Viết trực tiếp nội dung câu nói. Không chào hỏi, không chứa ký tự đặc biệt, không giải thích.";
+            var prompt = $"Viết duy nhất 1 câu văn lãng mạn, thật ngắn gọn để làm thông điệp tình yêu mỗi ngày. {context} Yêu cầu: Viết trực tiếp nội dung câu nói. Không chào hỏi, không giải thích.";
 
             var requestBody = new
             {
