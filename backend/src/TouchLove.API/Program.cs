@@ -222,14 +222,11 @@ try
     app.UseUserStatusCheck(); // Check if user is locked
     app.UseAuthorization();
 
-    // Hangfire dashboard (dev only)
-    if (app.Environment.IsDevelopment())
+    // Hangfire dashboard (temporarily open for testing)
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
     {
-        app.UseHangfireDashboard("/hangfire", new DashboardOptions
-        {
-            Authorization = [] // No auth in dev
-        });
-    }
+        Authorization = [] // WARNING: Open to public for testing
+    });
 
     // ── Register recurring Hangfire jobs ──────────────────────────────
     var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
